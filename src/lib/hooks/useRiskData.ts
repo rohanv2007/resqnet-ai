@@ -50,7 +50,7 @@ export function useRiskData() {
     alerts: (data?.alerts ?? []) as Alert[],
     reports: (data?.reports ?? []) as CitizenReport[],
     shelters: (data?.shelters ?? []) as Shelter[],
-    resources: [] as never[],
+    resources: (data?.resources ?? []) as Resource[],
     stats: data?.stats ?? {
       activeIncidents: 0,
       sheltersAvailable: 0,
