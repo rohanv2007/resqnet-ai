@@ -17,6 +17,8 @@ export interface MapViewProps {
   shelters?: Shelter[];
   reports?: CitizenReport[];
   routeSegments?: RouteSegment[];
+  routePolyline?: { coordinates: [number, number][]; label?: string; safety?: "safe" | "caution" | "avoid" };
+  originMarker?: { lat: number; lng: number; label?: string };
   simulationZones?: { lat: number; lng: number; radius: number; level: RiskZone["level"] }[];
   onFeatureSelect?: (feature: MapFeature) => void;
 }
