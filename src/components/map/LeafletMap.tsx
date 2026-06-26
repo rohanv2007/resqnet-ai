@@ -145,8 +145,9 @@ export default function LeafletMap({
         .addTo(map);
     });
 
-    // Dedicated layer for animated simulation zones — updated in a separate effect.
+    // Dedicated layers — updated by separate effects (so they don't rebuild the map).
     simLayerRef.current = L.layerGroup().addTo(map);
+    routeLayerRef.current = L.layerGroup().addTo(map);
 
     const invalidate = window.setTimeout(() => map.invalidateSize(), 0);
 
@@ -155,6 +156,7 @@ export default function LeafletMap({
       map.remove();
       mapRef.current = null;
       simLayerRef.current = null;
+      routeLayerRef.current = null;
       delete container._leaflet_id;
     };
   }, [
