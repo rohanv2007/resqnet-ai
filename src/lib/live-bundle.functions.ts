@@ -247,8 +247,71 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
       })),
     ];
 
-    // ---------- 7. Shape data to match existing UI types ----------
-    const sheltersOut = shelters.map((s) => ({
+    // ---------- 7. REAL nearby shelters from OpenStreetMap (Overpass API) ----------
+    // Query schools, community centres, hospitals, places of worship, town halls,
+    // colleges, and explicit emergency shelters within ~15 km of the user.
+    type OsmShelter = {
+      id: string; name: string; lat: number; lng: number;
+      capacity: number; occupancy: number; contact: string;
+      facilities: string[]; status: "open" | "full" | "closed"; distanceKm: number;
+    };
+    const osmShelters: OsmShelter[] = [];
+    try {
+      const radius = 15000; // metres
+      const ql = `[out:json][timeout:20];(
+        node["amenity"="shelter"](around:${radius},${data.lat},${data.lng});
+        node["amenity"="school"](around:${radius},${data.lat},${data.lng});
+        node["amenity"="college"](around:${radius},${data.lat},${data.lng});
+        node["amenity"="community_centre"](around:${radius},${data.lat},${data.lng});
+        node["amenity"="townhall"](around:${radius},${data.lat},${data.lng});
+        node["amenity"="hospital"](around:${radius},${data.lat},${data.lng});
+        node["amenity"="place_of_worship"](around:${radius},${data.lat},${data.lng});
+        way["amenity"="school"](around:${radius},${data.lat},${data.lng});
+        way["amenity"="hospital"](around:${radius},${data.lat},${data.lng});
+        way["amenity"="community_centre"](around:${radius},${data.lat},${data.lng});
+      );out center 80;`;
+      const endpoints = [
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter",
+      ];
+      let json: { elements?: Array<{ type: string; id: number; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> }> } | null = null;
+      for (const url of endpoints) {
+        try {
+          const r = await fetch(url, {
+            method: "POST",
+            body: "data=" + encodeURIComponent(ql),
+            headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "ResQNet/1.0" },
+          });
+          if (r.ok) { json = await r.json(); break; }
+        } catch { /* try next */ }
+      }
+      for (const el of json?.elements ?? []) {
+        const lat = el.lat ?? el.center?.lat;
+        const lng = el.lon ?? el.center?.lon;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+        const tags = el.tags ?? {};
+        const amenity = tags.amenity ?? "shelter";
+        const name = tags.name || tags["name:en"] || `${amenity.replace(/_/g, " ")} (unnamed)`;
+        const capMap: Record<string, number> = { school: 600, college: 1200, community_centre: 400, townhall: 300, hospital: 200, place_of_worship: 250, shelter: 150 };
+        const capacity = Number(tags.capacity) || capMap[amenity] || 300;
+        const distanceKm = Math.round(haversineKm([data.lat, data.lng], [lat!, lng!]) * 10) / 10;
+        osmShelters.push({
+          id: `osm-${el.type}-${el.id}`,
+          name,
+          lat: lat!, lng: lng!,
+          capacity,
+          occupancy: 0,
+          contact: tags.phone || tags["contact:phone"] || "",
+          facilities: [amenity.replace(/_/g, " ")],
+          status: "open",
+          distanceKm,
+        });
+      }
+      if (osmShelters.length) activeSources.push("OpenStreetMap");
+    } catch { /* offline */ }
+
+    // Merge with Supabase shelter rows (if any). Real OSM POIs win for nearest list.
+    const supaSheltersOut: OsmShelter[] = shelters.map((s) => ({
       id: s.id,
       name: s.name,
       lat: Number(s.lat), lng: Number(s.lng),
@@ -258,7 +321,11 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
       facilities: s.facilities ?? [],
       status: (s.status ?? "open") as "open" | "full" | "closed",
       distanceKm: Math.round(haversineKm([data.lat, data.lng], [Number(s.lat), Number(s.lng)]) * 10) / 10,
-    })).sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
+    }));
+
+    const sheltersOut = [...osmShelters, ...supaSheltersOut]
+      .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))
+      .slice(0, 20);
 
     const reportsOut = reports.slice(0, 30).map((r) => ({
       id: r.id,
