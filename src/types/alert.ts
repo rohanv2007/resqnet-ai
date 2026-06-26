@@ -10,7 +10,10 @@ export type AlertLanguage =
   | "telugu"
   | "kannada"
   | "bengali"
-  | "odia";
+  | "marathi"
+  | "gujarati"
+  | "odia"
+  | "punjabi";
 
 export interface Alert {
   id: string;
