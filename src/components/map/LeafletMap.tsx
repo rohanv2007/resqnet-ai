@@ -196,6 +196,34 @@ export default function LeafletMap({
     });
   }, [simulationZones]);
 
+  // Route polyline + origin marker, animated separately so changing the destination
+  // does not rebuild the entire map.
+  useEffect(() => {
+    const layer = routeLayerRef.current;
+    const map = mapRef.current;
+    if (!layer || !map) return;
+    layer.clearLayers();
+    if (originMarker) {
+      L.marker([originMarker.lat, originMarker.lng], {
+        icon: markerIcon("O", "#2563EB"),
+      })
+        .bindPopup(originMarker.label ?? "Origin")
+        .addTo(layer);
+    }
+    if (routePolyline && routePolyline.coordinates.length > 1) {
+      const safety = routePolyline.safety ?? "safe";
+      const line = L.polyline(routePolyline.coordinates, {
+        color: routeColors[safety],
+        weight: 5,
+        opacity: 0.85,
+      }).addTo(layer);
+      if (routePolyline.label) line.bindPopup(routePolyline.label);
+      map.fitBounds(line.getBounds(), { padding: [40, 40], maxZoom: 15 });
+    }
+  }, [routePolyline, originMarker]);
+
+
+
 
   return (
     <div
