@@ -18,7 +18,7 @@ import { getWeather } from "@/lib/weather.functions";
 import { getFireHotspots } from "@/lib/firms.functions";
 import { predictRisk } from "@/lib/risk.functions";
 import { getEvacuationRoute, getNearbyShelters } from "@/lib/routing.functions";
-import { draftAlert, sendAlert, listAlerts } from "@/lib/alerts.functions";
+import { draftAlert, sendAlert, listAlerts, getSubscriberCount } from "@/lib/alerts.functions";
 import { translateText } from "@/lib/translate.functions";
 
 export const Route = createFileRoute("/_dashboard/live")({
@@ -300,7 +300,9 @@ function AlertCard() {
   const draft = useServerFn(draftAlert);
   const send = useServerFn(sendAlert);
   const list = useServerFn(listAlerts);
+  const subsFn = useServerFn(getSubscriberCount);
   const { data: alerts, refetch } = useQuery({ queryKey: ["live:alerts"], queryFn: () => list() });
+  const { data: subs, refetch: refetchSubs } = useQuery({ queryKey: ["live:subs"], queryFn: () => subsFn(), refetchInterval: 15000 });
   const [chatId, setChatId] = useState("");
   const [title, setTitle] = useState("Flood risk in your area");
   const [message, setMessage] = useState("Heavy rainfall expected. Move to nearest shelter immediately.");
@@ -331,24 +333,31 @@ function AlertCard() {
     <Card className="lg:col-span-2">
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><Megaphone className="h-4 w-4" /> Alert Broadcast (real Telegram)</CardTitle>
-        <CardDescription>Requires authority/admin role + Telegram chat_id</CardDescription>
+        <CardDescription>
+          Broadcasts to <strong>{subs?.count ?? 0}</strong> subscriber(s) who sent <code>/start</code> to the bot.
+          Leave chat_id empty to broadcast to all.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
+        <div className="rounded border bg-muted/30 p-2 text-xs">
+          📣 To receive alerts: open Telegram → find your ResQNet bot → press <strong>Start</strong>. Then click refresh below.
+          <Button size="sm" variant="ghost" className="ml-2 h-6" onClick={() => refetchSubs()}>Refresh subs</Button>
+        </div>
         <div className="grid gap-2 md:grid-cols-2">
           <div>
             <Label>Title</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div>
-            <Label>Telegram chat_id</Label>
-            <Input value={chatId} onChange={(e) => setChatId(e.target.value)} placeholder="123456789" />
+            <Label>Telegram chat_id (optional — overrides broadcast)</Label>
+            <Input value={chatId} onChange={(e) => setChatId(e.target.value)} placeholder="leave empty to send to all subscribers" />
           </div>
         </div>
         <div>
           <Label>Message</Label>
           <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={2} />
         </div>
-        <Button onClick={() => m.mutate()} disabled={m.isPending}>{m.isPending ? <Loader2 className="h-4 w-4 animate-spin"/> : "Draft & Broadcast"}</Button>
+        <Button onClick={() => m.mutate()} disabled={m.isPending}>{m.isPending ? <Loader2 className="h-4 w-4 animate-spin"/> : `Draft & Broadcast${!chatId && subs?.count ? ` to ${subs.count}` : ""}`}</Button>
         <p className="pt-2 text-xs text-muted-foreground">Recent alerts:</p>
         <div className="space-y-1">
           {alerts?.slice(0, 5).map((a) => (

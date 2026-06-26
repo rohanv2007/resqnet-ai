@@ -27,6 +27,7 @@ import { Route as DashboardOverviewRouteImport } from './routes/_dashboard.overv
 import { Route as DashboardLiveRouteImport } from './routes/_dashboard.live'
 import { Route as DashboardEvacuationRouteImport } from './routes/_dashboard.evacuation'
 import { Route as DashboardAlertsRouteImport } from './routes/_dashboard.alerts'
+import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 
 const VerifyOtpRoute = VerifyOtpRouteImport.update({
   id: '/verify-otp',
@@ -117,6 +118,12 @@ const DashboardAlertsRoute = DashboardAlertsRouteImport.update({
   path: '/alerts',
   getParentRoute: () => DashboardRoute,
 } as any)
+const ApiPublicTelegramWebhookRoute =
+  ApiPublicTelegramWebhookRouteImport.update({
+    id: '/api/public/telegram/webhook',
+    path: '/api/public/telegram/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/risk-map': typeof DashboardRiskMapRoute
   '/settings': typeof DashboardSettingsRoute
   '/simulation': typeof DashboardSimulationRoute
+  '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -155,6 +163,7 @@ export interface FileRoutesByTo {
   '/risk-map': typeof DashboardRiskMapRoute
   '/settings': typeof DashboardSettingsRoute
   '/simulation': typeof DashboardSimulationRoute
+  '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -176,6 +185,7 @@ export interface FileRoutesById {
   '/_dashboard/risk-map': typeof DashboardRiskMapRoute
   '/_dashboard/settings': typeof DashboardSettingsRoute
   '/_dashboard/simulation': typeof DashboardSimulationRoute
+  '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/risk-map'
     | '/settings'
     | '/simulation'
+    | '/api/public/telegram/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '/risk-map'
     | '/settings'
     | '/simulation'
+    | '/api/public/telegram/webhook'
   id:
     | '__root__'
     | '/'
@@ -236,6 +248,7 @@ export interface FileRouteTypes {
     | '/_dashboard/risk-map'
     | '/_dashboard/settings'
     | '/_dashboard/simulation'
+    | '/api/public/telegram/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -248,6 +261,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   RoleSelectionRoute: typeof RoleSelectionRoute
   VerifyOtpRoute: typeof VerifyOtpRoute
+  ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -378,6 +392,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAlertsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/api/public/telegram/webhook': {
+      id: '/api/public/telegram/webhook'
+      path: '/api/public/telegram/webhook'
+      fullPath: '/api/public/telegram/webhook'
+      preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -419,6 +440,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   RoleSelectionRoute: RoleSelectionRoute,
   VerifyOtpRoute: VerifyOtpRoute,
+  ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

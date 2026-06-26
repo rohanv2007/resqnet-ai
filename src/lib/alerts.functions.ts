@@ -73,25 +73,47 @@ export const sendAlert = createServerFn({ method: "POST" })
     const deliveries: Delivery[] = [];
 
     if (alert.channels.includes("telegram") && process.env.TELEGRAM_API_KEY && process.env.LOVABLE_API_KEY) {
-      const chatId = data.telegram_chat_id ?? process.env.TELEGRAM_DEFAULT_CHAT_ID ?? null;
-      if (chatId) {
-        try {
-          const r = await fetch("https://connector-gateway.lovable.dev/telegram/sendMessage", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${process.env.LOVABLE_API_KEY}`,
-              "X-Connection-Api-Key": process.env.TELEGRAM_API_KEY,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
-          });
-          const body = await r.text();
-          deliveries.push({ channel: "telegram", status: r.ok ? "sent" : "failed", recipient: chatId, provider_response: body.slice(0, 500) });
-        } catch (e) {
-          deliveries.push({ channel: "telegram", status: "failed", recipient: chatId, provider_response: String(e) });
-        }
+      // Build recipient list: explicit chat_id overrides; otherwise broadcast to all
+      // active subscribers who /start'd the bot.
+      let recipients: string[] = [];
+      if (data.telegram_chat_id) {
+        recipients = [data.telegram_chat_id];
       } else {
-        deliveries.push({ channel: "telegram", status: "skipped", recipient: null, provider_response: "no chat_id" });
+        const { data: subs } = await supabaseAdmin
+          .from("telegram_subscribers")
+          .select("chat_id")
+          .eq("active", true);
+        recipients = (subs ?? []).map((s) => String(s.chat_id));
+        if (process.env.TELEGRAM_DEFAULT_CHAT_ID && recipients.length === 0) {
+          recipients = [process.env.TELEGRAM_DEFAULT_CHAT_ID];
+        }
+      }
+
+      if (recipients.length === 0) {
+        deliveries.push({ channel: "telegram", status: "skipped", recipient: null, provider_response: "no subscribers — ask users to /start the bot" });
+      } else {
+        for (const chatId of recipients) {
+          try {
+            const r = await fetch("https://connector-gateway.lovable.dev/telegram/sendMessage", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${process.env.LOVABLE_API_KEY}`,
+                "X-Connection-Api-Key": process.env.TELEGRAM_API_KEY,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
+            });
+            const body = await r.text();
+            const ok = r.ok;
+            deliveries.push({ channel: "telegram", status: ok ? "sent" : "failed", recipient: chatId, provider_response: body.slice(0, 300) });
+            // Telegram says user blocked the bot → mark inactive
+            if (!ok && (body.includes("blocked") || body.includes("deactivated") || body.includes("chat not found"))) {
+              await supabaseAdmin.from("telegram_subscribers").update({ active: false }).eq("chat_id", Number(chatId));
+            }
+          } catch (e) {
+            deliveries.push({ channel: "telegram", status: "failed", recipient: chatId, provider_response: String(e) });
+          }
+        }
       }
     }
     for (const ch of alert.channels) {
@@ -124,4 +146,14 @@ export const listAlerts = createServerFn({ method: "GET" })
     const { data, error } = await supabaseAdmin.from("alerts").select("*").order("created_at", { ascending: false }).limit(50);
     if (error) throw error;
     return data ?? [];
+  });
+
+export const getSubscriberCount = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { count } = await supabaseAdmin
+      .from("telegram_subscribers")
+      .select("chat_id", { count: "exact", head: true })
+      .eq("active", true);
+    return { count: count ?? 0 };
   });
