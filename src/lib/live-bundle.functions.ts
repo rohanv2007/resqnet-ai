@@ -102,6 +102,41 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
     }
     const nearby_fire_hotspots = hotspots.filter((h) => haversineKm([data.lat, data.lng], [h.lat, h.lng]) < 50).length;
 
+    // ---------- 2b. USGS earthquakes (last 7 days, within 300 km) ----------
+    const quakes: { lat: number; lng: number; mag: number; depth: number; place: string; time: number; distanceKm: number }[] = [];
+    try {
+      const starttime = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const qp = new URLSearchParams({
+        format: "geojson",
+        starttime,
+        latitude: String(data.lat),
+        longitude: String(data.lng),
+        maxradiuskm: "300",
+        minmagnitude: "2.5",
+        orderby: "magnitude",
+        limit: "50",
+      });
+      const r = await fetch(`https://earthquake.usgs.gov/fdsnws/event/1/query?${qp}`);
+      if (r.ok) {
+        const j = await r.json() as { features?: Array<{ properties: { mag: number; place: string; time: number }; geometry: { coordinates: [number, number, number] } }> };
+        for (const f of j.features ?? []) {
+          const [lng, lat, depth] = f.geometry.coordinates;
+          quakes.push({
+            lat, lng,
+            mag: f.properties.mag,
+            depth,
+            place: f.properties.place,
+            time: f.properties.time,
+            distanceKm: Math.round(haversineKm([data.lat, data.lng], [lat, lng]) * 10) / 10,
+          });
+        }
+        activeSources.push("USGS Earthquakes");
+      }
+    } catch { /* ignore */ }
+    const recent_quake_count = quakes.length;
+    const max_quake_magnitude = quakes.reduce((m, q) => Math.max(m, q.mag), 0);
+    const nearest_quake_km = quakes.length ? Math.min(...quakes.map((q) => q.distanceKm)) : null;
+
     // ---------- 3. Lovable Cloud reads (reports, shelters, alerts, road_status) ----------
     const { createClient } = await import("@supabase/supabase-js");
     const supa = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
