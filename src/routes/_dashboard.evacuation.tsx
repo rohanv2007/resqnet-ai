@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
-import { Ambulance, Loader2, Navigation, TriangleAlert } from "lucide-react";
+import { Ambulance, Bike, Car, Footprints, Loader2, Navigation, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -11,21 +11,65 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { MapView } from "@/components/map";
 import { StatusBadge } from "@/components/shared";
 import { useRiskData } from "@/lib/hooks/useRiskData";
-import { getEvacuationRoute } from "@/lib/routing.functions";
+import { getEvacuationRoute, getShelterRouteMatrix } from "@/lib/routing.functions";
+
+type Mode = "driving" | "walking" | "cycling";
+
+const MODE_META: Record<Mode, { label: string; icon: typeof Car }> = {
+  driving: { label: "Driving", icon: Car },
+  walking: { label: "Walking", icon: Footprints },
+  cycling: { label: "Cycling", icon: Bike },
+};
 
 function Page_evacuation() {
   const { selectedLocation, shelters, stats, zones } = useRiskData();
   const [selectedShelterId, setSelectedShelterId] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>("driving");
+
+  // Limit matrix call to nearest ~15 candidates (OSRM table cap & UI list size).
+  const candidateShelters = useMemo(() => shelters.slice(0, 15), [shelters]);
+
+  const matrixFn = useServerFn(getShelterRouteMatrix);
+  const matrixQuery = useQuery({
+    enabled: candidateShelters.length > 0,
+    queryKey: ["evac-matrix", selectedLocation.id, mode, candidateShelters.map((s) => s.id).join(",")],
+    queryFn: () =>
+      matrixFn({
+        data: {
+          origin_lat: selectedLocation.lat,
+          origin_lng: selectedLocation.lng,
+          destinations: candidateShelters.map((s) => ({ id: s.id, lat: s.lat, lng: s.lng })),
+          mode,
+        },
+      }),
+    staleTime: 60_000,
+  });
+
+  // Merge OSRM matrix results into shelter list and re-sort by real driving/walking distance.
+  const enrichedShelters = useMemo(() => {
+    const byId = new Map(matrixQuery.data?.results.map((r) => [r.id, r]) ?? []);
+    return candidateShelters
+      .map((s) => {
+        const r = byId.get(s.id);
+        return {
+          ...s,
+          distanceKm: r?.distance_km ?? s.distanceKm,
+          durationMin: r?.duration_min,
+          routeSource: r?.source,
+        };
+      })
+      .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
+  }, [candidateShelters, matrixQuery.data]);
 
   const selectedShelter = useMemo(
-    () => shelters.find((s) => s.id === selectedShelterId) ?? shelters[0],
-    [shelters, selectedShelterId],
+    () => enrichedShelters.find((s) => s.id === selectedShelterId) ?? enrichedShelters[0],
+    [enrichedShelters, selectedShelterId],
   );
 
   const routeFn = useServerFn(getEvacuationRoute);
   const routeQuery = useQuery({
     enabled: !!selectedShelter,
-    queryKey: ["evac-route", selectedLocation.id, selectedShelter?.id],
+    queryKey: ["evac-route", selectedLocation.id, selectedShelter?.id, mode],
     queryFn: () =>
       routeFn({
         data: {
@@ -33,35 +77,36 @@ function Page_evacuation() {
           origin_lng: selectedLocation.lng,
           dest_lat: selectedShelter!.lat,
           dest_lng: selectedShelter!.lng,
+          mode,
         },
       }),
     staleTime: 60_000,
   });
 
-  // Convert OSRM [lng,lat] -> Leaflet [lat,lng]
   const polylineCoords = useMemo(() => {
     const g = routeQuery.data?.geometry;
     if (!g) return [];
-    return (g.coordinates as [number, number][]).map(
-      ([lng, lat]) => [lat, lng] as [number, number],
-    );
+    return (g.coordinates as [number, number][]).map(([lng, lat]) => [lat, lng] as [number, number]);
   }, [routeQuery.data]);
 
-  // Safety score is reduced by nearby blocked roads (real signal from live bundle).
   const baseSafety = routeQuery.data?.safety_score ?? 0;
-  const safetyScore = Math.max(
-    10,
-    baseSafety - Math.min(40, stats.roadsBlocked * 8),
-  );
-
+  const safetyScore = Math.max(10, baseSafety - Math.min(40, stats.roadsBlocked * 8));
   const segmentSafety: "safe" | "caution" | "avoid" =
     safetyScore >= 75 ? "safe" : safetyScore >= 50 ? "caution" : "avoid";
+
+  const fmtDuration = (min?: number) => {
+    if (min == null || !Number.isFinite(min)) return "—";
+    if (min < 60) return `${Math.round(min)} min`;
+    const h = Math.floor(min / 60);
+    const m = Math.round(min % 60);
+    return m ? `${h}h ${m}m` : `${h}h`;
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Evacuation"
-        description="Real-time evacuation routing powered by OSRM (OpenStreetMap road network)."
+        description="Real-time routing via OSRM (OpenStreetMap). Distance and ETA reflect the chosen travel mode."
       />
       <div className="grid gap-4 xl:grid-cols-[360px_1fr]">
         <div className="space-y-4">
@@ -69,12 +114,36 @@ function Page_evacuation() {
             <CardHeader>
               <CardTitle className="text-base">Origin</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <div className="rounded-lg border bg-background p-3">
                 <p className="text-sm font-medium">{selectedLocation.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {selectedLocation.district}, {selectedLocation.state}
                 </p>
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Travel mode
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {(Object.keys(MODE_META) as Mode[]).map((m) => {
+                    const Icon = MODE_META[m].icon;
+                    const active = mode === m;
+                    return (
+                      <Button
+                        key={m}
+                        type="button"
+                        size="sm"
+                        variant={active ? "default" : "outline"}
+                        onClick={() => setMode(m)}
+                        className="gap-1.5"
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {MODE_META[m].label}
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -84,17 +153,20 @@ function Page_evacuation() {
               <CardTitle className="text-base">
                 Nearest Safe Shelters
                 <span className="ml-2 text-xs font-normal text-muted-foreground">
-                  ({shelters.length})
+                  ({enrichedShelters.length})
                 </span>
+                {matrixQuery.isFetching && (
+                  <Loader2 className="ml-2 inline h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {shelters.length === 0 && (
+              {enrichedShelters.length === 0 && (
                 <p className="text-sm text-muted-foreground">
                   No shelters registered for this region yet.
                 </p>
               )}
-              {shelters.slice(0, 6).map((shelter) => {
+              {enrichedShelters.slice(0, 8).map((shelter) => {
                 const occupancy = shelter.capacity
                   ? Math.round((shelter.occupancy / shelter.capacity) * 100)
                   : 0;
@@ -105,10 +177,10 @@ function Page_evacuation() {
                     className={`rounded-lg border bg-background p-3 transition ${active ? "border-brand ring-1 ring-brand" : ""}`}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium">{shelter.name}</p>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{shelter.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {shelter.distanceKm ?? "—"} km away
+                          {shelter.distanceKm ?? "—"} km · {fmtDuration(shelter.durationMin)}
                         </p>
                       </div>
                       <StatusBadge status={shelter.status} />
@@ -145,18 +217,12 @@ function Page_evacuation() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-muted-foreground">Travel time</p>
-                  <p className="font-semibold">
-                    {routeQuery.data
-                      ? `${routeQuery.data.duration_min.toFixed(0)} min`
-                      : "—"}
-                  </p>
+                  <p className="font-semibold">{fmtDuration(routeQuery.data?.duration_min)}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Distance</p>
                   <p className="font-semibold">
-                    {routeQuery.data
-                      ? `${routeQuery.data.distance_km.toFixed(1)} km`
-                      : "—"}
+                    {routeQuery.data ? `${routeQuery.data.distance_km.toFixed(1)} km` : "—"}
                   </p>
                 </div>
                 <div>
@@ -165,9 +231,7 @@ function Page_evacuation() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Source</p>
-                  <p className="font-semibold text-xs">
-                    {routeQuery.data?.source ?? "—"}
-                  </p>
+                  <p className="text-xs font-semibold">{routeQuery.data?.source ?? "—"}</p>
                 </div>
               </div>
               {stats.roadsBlocked > 0 && (
@@ -192,14 +256,14 @@ function Page_evacuation() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Ambulance className="h-4 w-4 text-brand" />
-              Route Map
+              Route Map · {MODE_META[mode].label}
             </CardTitle>
             <StatusBadge status="active" />
           </CardHeader>
           <CardContent>
             <MapView
               center={[selectedLocation.lat, selectedLocation.lng]}
-              shelters={shelters}
+              shelters={enrichedShelters}
               zones={zones}
               originMarker={{
                 lat: selectedLocation.lat,
