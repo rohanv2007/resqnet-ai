@@ -4,7 +4,7 @@ import {
   AlertTriangle,
   ClipboardList,
   MapPinned,
-  Route,
+  Route as RouteIcon,
   ShieldAlert,
   Tent,
 } from "lucide-react";
@@ -59,7 +59,7 @@ function Page_overview() {
               title="Roads Blocked"
               value={stats.roadsBlocked}
               detail="4 alternate routes open"
-              icon={Route}
+              icon={RouteIcon}
               tone="danger"
             />
             <StatCard
