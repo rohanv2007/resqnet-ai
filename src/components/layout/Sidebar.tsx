@@ -1,7 +1,6 @@
-"use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Link from "@tanstack/react-router";
+import { usePathname } from "@tanstack/react-router";
 import {
   Bell,
   ChartNoAxesCombined,

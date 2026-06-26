@@ -1,4 +1,3 @@
-"use client";
 
 import { createContext, useEffect, useMemo, useReducer } from "react";
 import type { LoginCredentials, User } from "@/types";

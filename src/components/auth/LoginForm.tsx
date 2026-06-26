@@ -1,7 +1,6 @@
-"use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";

@@ -1,4 +1,3 @@
-"use client";
 
 import { motion, useReducedMotion } from "framer-motion";
 import { AlertTriangle, CheckCircle2, Info, ShieldAlert } from "lucide-react";

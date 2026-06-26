@@ -1,4 +1,3 @@
-"use client";
 
 import { Bell, Search, ShieldCheck } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";

@@ -1,7 +1,6 @@
-"use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "@tanstack/react-router";
 import { LoadingSkeleton } from "@/components/shared";
 import { useAuth } from "@/lib/hooks/useAuth";
 
