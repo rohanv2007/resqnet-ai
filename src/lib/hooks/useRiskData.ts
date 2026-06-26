@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useLocation } from "./useLocation";
 import { getLiveRiskBundle } from "@/lib/live-bundle.functions";
-import type { Alert, CitizenReport, RiskScore, RiskTrendPoint, RiskZone, Shelter } from "@/types";
+import type { Alert, CitizenReport, Resource, RiskScore, RiskTrendPoint, RiskZone, Shelter } from "@/types";
 
 const EMPTY_TRENDS: RiskTrendPoint[] = [];
 const EMPTY_ZONES: RiskZone[] = [];

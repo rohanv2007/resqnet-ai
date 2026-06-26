@@ -249,6 +249,18 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
       };
     });
 
+    const resourcesOut = resourcesRows.map((r) => ({
+      id: r.id,
+      type: (r.type ?? "rescue_team") as "rescue_team" | "shelter" | "medical" | "food_water" | "vehicle",
+      name: r.name,
+      location: r.location ?? "",
+      status: (r.status ?? "available") as "available" | "deployed" | "maintenance",
+      capacity: r.capacity ?? undefined,
+      currentLoad: r.current_load ?? undefined,
+      contact: r.contact ?? "",
+      lastUpdated: r.updated_at,
+    }));
+
     const activeIncidents = reports.filter((r) => r.status === "verified" && (r.severity === "danger" || r.severity === "warning")).length;
     const sheltersAvailable = sheltersOut.filter((s) => s.status === "open").length;
     const roadsBlocked = roads.length;
@@ -260,6 +272,7 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
       alerts: alertsOut,
       reports: reportsOut,
       shelters: sheltersOut,
+      resources: resourcesOut,
       stats: {
         activeIncidents,
         sheltersAvailable,
@@ -274,3 +287,4 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
       fetched_at: now,
     };
   });
+
