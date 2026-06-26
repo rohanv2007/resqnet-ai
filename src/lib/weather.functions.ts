@@ -55,7 +55,7 @@ export const getWeather = createServerFn({ method: "GET" })
     // (Removed best-effort snapshot insert — was a source of intermittent failures.)
 
 
-    return {
+    const payload = {
       current: {
         temperature_c: json.current?.temperature_2m ?? null,
         humidity: json.current?.relative_humidity_2m ?? null,
@@ -74,4 +74,6 @@ export const getWeather = createServerFn({ method: "GET" })
       source: "Open-Meteo",
       fetched_at: new Date().toISOString(),
     };
+    WEATHER_CACHE.set(key, { at: Date.now(), payload });
+    return payload;
   });
