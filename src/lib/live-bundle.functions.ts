@@ -113,11 +113,13 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
       { data: rShelters },
       { data: rAlerts },
       { data: rRoads },
+      { data: rResources },
     ] = await Promise.all([
       supa.from("citizen_reports").select("*").order("created_at", { ascending: false }).limit(100),
       supa.from("shelters").select("*").order("name"),
       supa.from("alerts").select("*").order("created_at", { ascending: false }).limit(50),
       supa.from("road_status").select("*").in("status", ["blocked", "flooded"]).limit(100),
+      supa.from("resources").select("*").order("updated_at", { ascending: false }).limit(100),
     ]);
     activeSources.push("Lovable Cloud");
     activeSources.push("Citizen Reports");
@@ -126,6 +128,7 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
     const shelters = rShelters ?? [];
     const alerts = rAlerts ?? [];
     const roads = rRoads ?? [];
+    const resourcesRows = rResources ?? [];
 
     const nearby_verified_reports = reports
       .filter((r) => r.status === "verified")
