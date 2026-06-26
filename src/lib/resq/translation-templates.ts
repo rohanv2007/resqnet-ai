@@ -74,8 +74,11 @@ const DICT: Record<string, Dict> = {
 export function translateTemplate(text: string, target: AlertLanguage): string {
   if (target === "english") return text;
   let out = text;
-  // Replace every matching English phrase, not just the first one.
-  for (const [en, dict] of Object.entries(DICT)) {
+  // Replace every matching English phrase. Sort by length DESC so longer
+  // phrases (e.g. "Move to nearest shelter immediately") match before shorter
+  // overlapping ones (e.g. "Move to", "immediately").
+  const entries = Object.entries(DICT).sort((a, b) => b[0].length - a[0].length);
+  for (const [en, dict] of entries) {
     const translated = dict[target];
     if (!translated) continue;
     const re = new RegExp(en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
