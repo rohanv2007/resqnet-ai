@@ -51,6 +51,7 @@ export default function LeafletMap({
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const simLayerRef = useRef<L.LayerGroup | null>(null);
 
   useEffect(() => {
     const container = containerRef.current as LeafletElement | null;
@@ -77,7 +78,7 @@ export default function LeafletMap({
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);
 
-    [...zones, ...simulationZones].forEach((zone) => {
+    zones.forEach((zone) => {
       L.circle([zone.lat, zone.lng], {
         radius: zone.radius,
         color: riskColors[zone.level],
@@ -141,12 +142,16 @@ export default function LeafletMap({
         .addTo(map);
     });
 
+    // Dedicated layer for animated simulation zones — updated in a separate effect.
+    simLayerRef.current = L.layerGroup().addTo(map);
+
     const invalidate = window.setTimeout(() => map.invalidateSize(), 0);
 
     return () => {
       window.clearTimeout(invalidate);
       map.remove();
       mapRef.current = null;
+      simLayerRef.current = null;
       delete container._leaflet_id;
     };
   }, [
@@ -157,9 +162,35 @@ export default function LeafletMap({
     shelters,
     reports,
     routeSegments,
-    simulationZones,
     onFeatureSelect,
   ]);
+
+  // Animate simulation zones without rebuilding the map.
+  useEffect(() => {
+    const layer = simLayerRef.current;
+    if (!layer) return;
+    layer.clearLayers();
+    simulationZones.forEach((zone) => {
+      const color = riskColors[zone.level];
+      L.circle([zone.lat, zone.lng], {
+        radius: zone.radius,
+        color,
+        fillColor: color,
+        fillOpacity: 0.22,
+        weight: 1.5,
+      }).addTo(layer);
+      // Pulsing core
+      L.circleMarker([zone.lat, zone.lng], {
+        radius: 6,
+        color,
+        fillColor: color,
+        fillOpacity: 0.9,
+        weight: 2,
+        className: "sim-pulse",
+      }).addTo(layer);
+    });
+  }, [simulationZones]);
+
 
   return (
     <div
