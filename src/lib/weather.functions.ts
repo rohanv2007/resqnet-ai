@@ -33,15 +33,25 @@ export const getWeather = createServerFn({ method: "GET" })
       timezone: "auto",
     });
     const url = `https://api.open-meteo.com/v1/forecast?${params}`;
-    const res = await fetch(url);
-    if (!res.ok) {
-      // On 429, serve last cached value if available, even if stale.
+    let res: Response | null = null;
+    let lastErr: string | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        res = await fetch(url);
+        if (res.ok) break;
+        lastErr = `Open-Meteo ${res.status}`;
+        if (res.status !== 429 && res.status < 500) break;
+      } catch (e) {
+        lastErr = (e as Error).message;
+      }
+      await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+    }
+    if (!res || !res.ok) {
       if (cached) return cached.payload as never;
-      throw new Error(
-        res.status === 429
-          ? "Open-Meteo rate-limited (429). Try again in a minute."
-          : `Open-Meteo error ${res.status}`,
-      );
+      // Last resort: serve any other cached coord (rough but avoids blank UI)
+      const any = WEATHER_CACHE.values().next().value;
+      if (any) return any.payload as never;
+      throw new Error(lastErr ?? "Open-Meteo unavailable");
     }
     const json = await res.json() as {
       current?: Record<string, number>;
