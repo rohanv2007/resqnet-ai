@@ -327,6 +327,7 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
         temperature_c, humidity, wind_speed_kmh, rainfall_mm_24h, daily,
       },
       hotspots,
+      quakes,
       fetched_at: now,
     };
   });
