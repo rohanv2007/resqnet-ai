@@ -25,6 +25,9 @@ export interface RiskInputs {
   distance_to_coast_km?: number | null;
   distance_to_river_km?: number | null;
   population_density?: number | null;
+  recent_quake_count?: number;     // last 7 days within ~300 km
+  max_quake_magnitude?: number;    // largest M in window
+  nearest_quake_km?: number | null;
 }
 
 export interface RiskOutput {
@@ -77,10 +80,17 @@ export function computeRisk(i: RiskInputs): RiskOutput {
     if (hotspots > 0) factors.push(`${hotspots} NASA FIRMS hotspot(s) nearby`);
     confidence = 70 + Math.min(20, hotspots * 4);
   } else if (i.disaster === "earthquake") {
-    // Without seismic feed, use placeholder population/exposure
-    score += 10;
-    if ((i.population_density ?? 0) > 10000) { score += 15; factors.push("Dense settlement"); }
-    confidence = 50;
+    // Real seismic input from USGS feed
+    const quakes = i.recent_quake_count ?? 0;
+    const maxMag = i.max_quake_magnitude ?? 0;
+    const nearest = i.nearest_quake_km ?? 9999;
+    score += Math.min(45, maxMag * 9);                     // M5 -> 45
+    score += Math.min(20, quakes * 2);                      // swarm activity
+    if (nearest < 50 && maxMag >= 4) { score += 15; factors.push(`Strong quake M${maxMag.toFixed(1)} within ${nearest.toFixed(0)} km`); }
+    else if (maxMag >= 3) factors.push(`Recent quake M${maxMag.toFixed(1)} (USGS)`);
+    if (quakes >= 5) factors.push(`${quakes} tremors in last 7 days`);
+    if ((i.population_density ?? 0) > 10000) { score += 10; factors.push("Dense settlement"); }
+    confidence = 70 + Math.min(20, quakes * 2);
   } else if (i.disaster === "landslide") {
     score += Math.min(40, rain * 0.35);
     if (elev > 800) { score += 15; factors.push("Hill/mountain terrain"); }

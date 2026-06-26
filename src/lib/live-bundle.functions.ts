@@ -102,6 +102,41 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
     }
     const nearby_fire_hotspots = hotspots.filter((h) => haversineKm([data.lat, data.lng], [h.lat, h.lng]) < 50).length;
 
+    // ---------- 2b. USGS earthquakes (last 7 days, within 300 km) ----------
+    const quakes: { lat: number; lng: number; mag: number; depth: number; place: string; time: number; distanceKm: number }[] = [];
+    try {
+      const starttime = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const qp = new URLSearchParams({
+        format: "geojson",
+        starttime,
+        latitude: String(data.lat),
+        longitude: String(data.lng),
+        maxradiuskm: "300",
+        minmagnitude: "2.5",
+        orderby: "magnitude",
+        limit: "50",
+      });
+      const r = await fetch(`https://earthquake.usgs.gov/fdsnws/event/1/query?${qp}`);
+      if (r.ok) {
+        const j = await r.json() as { features?: Array<{ properties: { mag: number; place: string; time: number }; geometry: { coordinates: [number, number, number] } }> };
+        for (const f of j.features ?? []) {
+          const [lng, lat, depth] = f.geometry.coordinates;
+          quakes.push({
+            lat, lng,
+            mag: f.properties.mag,
+            depth,
+            place: f.properties.place,
+            time: f.properties.time,
+            distanceKm: Math.round(haversineKm([data.lat, data.lng], [lat, lng]) * 10) / 10,
+          });
+        }
+        activeSources.push("USGS Earthquakes");
+      }
+    } catch { /* ignore */ }
+    const recent_quake_count = quakes.length;
+    const max_quake_magnitude = quakes.reduce((m, q) => Math.max(m, q.mag), 0);
+    const nearest_quake_km = quakes.length ? Math.min(...quakes.map((q) => q.distanceKm)) : null;
+
     // ---------- 3. Lovable Cloud reads (reports, shelters, alerts, road_status) ----------
     const { createClient } = await import("@supabase/supabase-js");
     const supa = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -143,6 +178,7 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
         rainfall_mm_24h, wind_speed_kmh, temperature_c, humidity,
         nearby_fire_hotspots, nearby_verified_reports, blocked_roads_nearby,
         population_density: data.population,
+        recent_quake_count, max_quake_magnitude, nearest_quake_km,
       });
       return {
         type: disaster,
@@ -197,6 +233,13 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
         radius: 500,
         level: (r.status === "flooded" ? "danger" : "warning") as RiskLevel,
         label: r.name ?? `Road ${r.status}`,
+      })),
+      ...quakes.slice(0, 8).map((q, i) => ({
+        id: `quake-${i}`,
+        lat: q.lat, lng: q.lng,
+        radius: Math.max(600, q.mag * 800),
+        level: (q.mag >= 5 ? "danger" : q.mag >= 4 ? "warning" : "watch") as RiskLevel,
+        label: `M${q.mag.toFixed(1)} quake — ${q.place}`,
       })),
     ];
 
@@ -284,6 +327,7 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
         temperature_c, humidity, wind_speed_kmh, rainfall_mm_24h, daily,
       },
       hotspots,
+      quakes,
       fetched_at: now,
     };
   });
