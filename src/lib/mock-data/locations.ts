@@ -1,0 +1,66 @@
+import type { Location } from "@/types";
+
+export const LOCATIONS: Location[] = [
+  {
+    id: "kl-aluva",
+    name: "Aluva",
+    type: "ward",
+    lat: 10.1004,
+    lng: 76.357,
+    district: "Ernakulam",
+    state: "Kerala",
+    population: 28000,
+  },
+  {
+    id: "kl-periyar",
+    name: "Periyar Nagar",
+    type: "ward",
+    lat: 10.1124,
+    lng: 76.3489,
+    district: "Ernakulam",
+    state: "Kerala",
+    population: 14000,
+  },
+  {
+    id: "kl-edapally",
+    name: "Edapally",
+    type: "ward",
+    lat: 10.0261,
+    lng: 76.3082,
+    district: "Ernakulam",
+    state: "Kerala",
+    population: 35000,
+  },
+  {
+    id: "tn-chennai-t-nagar",
+    name: "T. Nagar",
+    type: "ward",
+    lat: 13.0418,
+    lng: 80.2341,
+    district: "Chennai",
+    state: "Tamil Nadu",
+    population: 80000,
+  },
+  {
+    id: "tn-tambaram",
+    name: "Tambaram",
+    type: "ward",
+    lat: 12.9249,
+    lng: 80.1,
+    district: "Chennai",
+    state: "Tamil Nadu",
+    population: 55000,
+  },
+  {
+    id: "od-puri",
+    name: "Puri",
+    type: "district",
+    lat: 19.8135,
+    lng: 85.8312,
+    district: "Puri",
+    state: "Odisha",
+    population: 200000,
+  },
+];
+
+export const DEFAULT_LOCATION_ID = "kl-aluva";
