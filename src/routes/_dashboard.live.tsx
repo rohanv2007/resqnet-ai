@@ -312,7 +312,13 @@ function AlertCard() {
       return r;
     },
     onSuccess: (r) => {
-      toast.success(`Alert sent: ${r.deliveries.map(d => `${d.channel}:${d.status}`).join(", ")}`);
+      const summary = r.deliveries.map(d => `${d.channel}:${d.status}`).join(", ");
+      const failed = r.deliveries.find(d => d.status === "failed");
+      if (failed) {
+        toast.error(`Broadcast failed — ${failed.provider_response.slice(0, 200)}`);
+      } else {
+        toast.success(`Alert sent: ${summary}`);
+      }
       refetch();
     },
     onError: (e) => toast.error(String(e)),
