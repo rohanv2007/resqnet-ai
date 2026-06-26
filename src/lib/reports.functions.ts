@@ -65,7 +65,12 @@ export const updateReportStatus = createServerFn({ method: "POST" })
     const elevated = roles.some(r => r === "authority" || r === "ngo" || r === "admin");
     if (!elevated) throw new Error("Forbidden: requires authority/ngo/admin role");
 
-    const patch: Record<string, unknown> = { status: data.status };
+    const patch: {
+      status: typeof data.status;
+      verified_by?: string;
+      verified_at?: string;
+      resolved_at?: string;
+    } = { status: data.status };
     if (data.status === "verified") {
       patch.verified_by = context.userId;
       patch.verified_at = new Date().toISOString();

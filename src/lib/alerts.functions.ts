@@ -71,7 +71,7 @@ export const sendAlert = createServerFn({ method: "POST" })
     const localizedMsg = translateTemplate(alert.message, alert.language as AlertLanguage);
     const text = `🚨 *${localizedTitle}*\n\n${localizedMsg}\n\n_Severity: ${alert.severity.toUpperCase()}_\n_Source: ResQNet hyperlocal alert_`;
 
-    const deliveries: { channel: string; status: string; recipient?: string; provider_response?: unknown }[] = [];
+    const deliveries: { channel: string; status: string; recipient?: string; provider_response?: Record<string, unknown> }[] = [];
 
     // Telegram (real)
     if (alert.channels.includes("telegram") && process.env.TELEGRAM_API_KEY && process.env.LOVABLE_API_KEY) {
