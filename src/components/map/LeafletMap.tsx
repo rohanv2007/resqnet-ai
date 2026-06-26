@@ -46,12 +46,15 @@ export default function LeafletMap({
   shelters = [],
   reports = [],
   routeSegments = [],
+  routePolyline,
+  originMarker,
   simulationZones = [],
   onFeatureSelect,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const simLayerRef = useRef<L.LayerGroup | null>(null);
+  const routeLayerRef = useRef<L.LayerGroup | null>(null);
 
   useEffect(() => {
     const container = containerRef.current as LeafletElement | null;
