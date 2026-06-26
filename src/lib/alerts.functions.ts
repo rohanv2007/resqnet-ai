@@ -71,11 +71,12 @@ export const sendAlert = createServerFn({ method: "POST" })
     const localizedMsg = translateTemplate(alert.message, alert.language as AlertLanguage);
     const text = `🚨 *${localizedTitle}*\n\n${localizedMsg}\n\n_Severity: ${alert.severity.toUpperCase()}_\n_Source: ResQNet hyperlocal alert_`;
 
-    const deliveries: { channel: string; status: string; recipient?: string; provider_response?: Record<string, unknown> }[] = [];
+    type Delivery = { channel: string; status: string; recipient: string | null; provider_response: string };
+    const deliveries: Delivery[] = [];
 
     // Telegram (real)
     if (alert.channels.includes("telegram") && process.env.TELEGRAM_API_KEY && process.env.LOVABLE_API_KEY) {
-      const chatId = data.telegram_chat_id ?? process.env.TELEGRAM_DEFAULT_CHAT_ID;
+      const chatId = data.telegram_chat_id ?? process.env.TELEGRAM_DEFAULT_CHAT_ID ?? null;
       if (chatId) {
         try {
           const r = await fetch("https://connector-gateway.lovable.dev/telegram/sendMessage", {
@@ -87,22 +88,28 @@ export const sendAlert = createServerFn({ method: "POST" })
             },
             body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
           });
-          const body = await r.json().catch(() => ({}));
-          deliveries.push({ channel: "telegram", status: r.ok ? "sent" : "failed", recipient: chatId, provider_response: body });
+          const body = await r.text();
+          deliveries.push({ channel: "telegram", status: r.ok ? "sent" : "failed", recipient: chatId, provider_response: body.slice(0, 500) });
         } catch (e) {
-          deliveries.push({ channel: "telegram", status: "failed", recipient: chatId, provider_response: { error: String(e) } });
+          deliveries.push({ channel: "telegram", status: "failed", recipient: chatId, provider_response: String(e) });
         }
       } else {
-        deliveries.push({ channel: "telegram", status: "skipped", provider_response: { reason: "no chat_id provided" } });
+        deliveries.push({ channel: "telegram", status: "skipped", recipient: null, provider_response: "no chat_id" });
       }
     }
     for (const ch of alert.channels) {
       if (ch === "telegram") continue;
-      deliveries.push({ channel: ch, status: "queued", provider_response: { mock: true } });
+      deliveries.push({ channel: ch, status: "queued", recipient: null, provider_response: "mock" });
     }
 
     await context.supabase.from("alert_deliveries").insert(
-      deliveries.map(d => ({ ...d, alert_id: alert.id })),
+      deliveries.map(d => ({
+        alert_id: alert.id,
+        channel: d.channel,
+        status: d.status,
+        recipient: d.recipient,
+        provider_response: d.provider_response,
+      })),
     );
     const sentCount = deliveries.filter(d => d.status === "sent").length;
     const { data: updated } = await context.supabase.from("alerts").update({
