@@ -22,7 +22,7 @@ export interface MapViewProps {
 }
 
 const LeafletMap = lazy(() =>
-  import("./LeafletMap").then((m) => ({ default: m.default ?? m.LeafletMap ?? (m as any) })),
+  import("./LeafletMap").then((m) => ({ default: m.LeafletMap })),
 );
 
 export function MapView(props: MapViewProps) {

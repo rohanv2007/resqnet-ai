@@ -98,9 +98,11 @@ export function DashboardWidgetGrid({
     <div className="space-y-4">
       <div className="flex justify-end">
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger render={<Button variant="outline" />}>
-            <SlidersHorizontal className="h-4 w-4" />
-            Customize Dashboard
+          <DialogTrigger asChild>
+            <Button variant="outline">
+              <SlidersHorizontal className="h-4 w-4" />
+              Customize Dashboard
+            </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>

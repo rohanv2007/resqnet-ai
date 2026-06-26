@@ -13,9 +13,8 @@ export function DataSourceIndicator({
 
   return (
     <Popover>
-      <PopoverTrigger
-        render={<Button variant="outline" size="sm" className="gap-2 rounded-full" />}
-      >
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-2 rounded-full">
           <span
             className={
               degraded
@@ -27,6 +26,7 @@ export function DataSourceIndicator({
           <span className="hidden sm:inline">
             {activeSources.length}/{totalSources} sources
           </span>
+        </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72">
         <div className="space-y-3">
