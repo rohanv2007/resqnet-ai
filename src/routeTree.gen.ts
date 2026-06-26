@@ -12,10 +12,20 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyOtpRouteImport } from './routes/verify-otp'
 import { Route as RoleSelectionRouteImport } from './routes/role-selection'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardSimulationRouteImport } from './routes/_dashboard.simulation'
+import { Route as DashboardSettingsRouteImport } from './routes/_dashboard.settings'
+import { Route as DashboardRiskMapRouteImport } from './routes/_dashboard.risk-map'
+import { Route as DashboardResourcesRouteImport } from './routes/_dashboard.resources'
+import { Route as DashboardReportsRouteImport } from './routes/_dashboard.reports'
+import { Route as DashboardOverviewRouteImport } from './routes/_dashboard.overview'
+import { Route as DashboardEvacuationRouteImport } from './routes/_dashboard.evacuation'
+import { Route as DashboardAlertsRouteImport } from './routes/_dashboard.alerts'
 
 const VerifyOtpRoute = VerifyOtpRouteImport.update({
   id: '/verify-otp',
@@ -30,6 +40,11 @@ const RoleSelectionRoute = RoleSelectionRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -47,10 +62,54 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/_dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardSimulationRoute = DashboardSimulationRouteImport.update({
+  id: '/simulation',
+  path: '/simulation',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardRiskMapRoute = DashboardRiskMapRouteImport.update({
+  id: '/risk-map',
+  path: '/risk-map',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardResourcesRoute = DashboardResourcesRouteImport.update({
+  id: '/resources',
+  path: '/resources',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardReportsRoute = DashboardReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardOverviewRoute = DashboardOverviewRouteImport.update({
+  id: '/overview',
+  path: '/overview',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardEvacuationRoute = DashboardEvacuationRouteImport.update({
+  id: '/evacuation',
+  path: '/evacuation',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardAlertsRoute = DashboardAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => DashboardRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -58,28 +117,56 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/role-selection': typeof RoleSelectionRoute
   '/verify-otp': typeof VerifyOtpRoute
+  '/alerts': typeof DashboardAlertsRoute
+  '/evacuation': typeof DashboardEvacuationRoute
+  '/overview': typeof DashboardOverviewRoute
+  '/reports': typeof DashboardReportsRoute
+  '/resources': typeof DashboardResourcesRoute
+  '/risk-map': typeof DashboardRiskMapRoute
+  '/settings': typeof DashboardSettingsRoute
+  '/simulation': typeof DashboardSimulationRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/role-selection': typeof RoleSelectionRoute
   '/verify-otp': typeof VerifyOtpRoute
+  '/alerts': typeof DashboardAlertsRoute
+  '/evacuation': typeof DashboardEvacuationRoute
+  '/overview': typeof DashboardOverviewRoute
+  '/reports': typeof DashboardReportsRoute
+  '/resources': typeof DashboardResourcesRoute
+  '/risk-map': typeof DashboardRiskMapRoute
+  '/settings': typeof DashboardSettingsRoute
+  '/simulation': typeof DashboardSimulationRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_dashboard': typeof DashboardRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/role-selection': typeof RoleSelectionRoute
   '/verify-otp': typeof VerifyOtpRoute
+  '/_dashboard/alerts': typeof DashboardAlertsRoute
+  '/_dashboard/evacuation': typeof DashboardEvacuationRoute
+  '/_dashboard/overview': typeof DashboardOverviewRoute
+  '/_dashboard/reports': typeof DashboardReportsRoute
+  '/_dashboard/resources': typeof DashboardResourcesRoute
+  '/_dashboard/risk-map': typeof DashboardRiskMapRoute
+  '/_dashboard/settings': typeof DashboardSettingsRoute
+  '/_dashboard/simulation': typeof DashboardSimulationRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -88,34 +175,64 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/onboarding'
+    | '/register'
     | '/reset-password'
     | '/role-selection'
     | '/verify-otp'
+    | '/alerts'
+    | '/evacuation'
+    | '/overview'
+    | '/reports'
+    | '/resources'
+    | '/risk-map'
+    | '/settings'
+    | '/simulation'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/forgot-password'
     | '/login'
     | '/onboarding'
+    | '/register'
     | '/reset-password'
     | '/role-selection'
     | '/verify-otp'
+    | '/alerts'
+    | '/evacuation'
+    | '/overview'
+    | '/reports'
+    | '/resources'
+    | '/risk-map'
+    | '/settings'
+    | '/simulation'
   id:
     | '__root__'
     | '/'
+    | '/_dashboard'
     | '/forgot-password'
     | '/login'
     | '/onboarding'
+    | '/register'
     | '/reset-password'
     | '/role-selection'
     | '/verify-otp'
+    | '/_dashboard/alerts'
+    | '/_dashboard/evacuation'
+    | '/_dashboard/overview'
+    | '/_dashboard/reports'
+    | '/_dashboard/resources'
+    | '/_dashboard/risk-map'
+    | '/_dashboard/settings'
+    | '/_dashboard/simulation'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
+  RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RoleSelectionRoute: typeof RoleSelectionRoute
   VerifyOtpRoute: typeof VerifyOtpRoute
@@ -144,6 +261,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -165,6 +289,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_dashboard': {
+      id: '/_dashboard'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -172,14 +303,98 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_dashboard/simulation': {
+      id: '/_dashboard/simulation'
+      path: '/simulation'
+      fullPath: '/simulation'
+      preLoaderRoute: typeof DashboardSimulationRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/settings': {
+      id: '/_dashboard/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof DashboardSettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/risk-map': {
+      id: '/_dashboard/risk-map'
+      path: '/risk-map'
+      fullPath: '/risk-map'
+      preLoaderRoute: typeof DashboardRiskMapRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/resources': {
+      id: '/_dashboard/resources'
+      path: '/resources'
+      fullPath: '/resources'
+      preLoaderRoute: typeof DashboardResourcesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/reports': {
+      id: '/_dashboard/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof DashboardReportsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/overview': {
+      id: '/_dashboard/overview'
+      path: '/overview'
+      fullPath: '/overview'
+      preLoaderRoute: typeof DashboardOverviewRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/evacuation': {
+      id: '/_dashboard/evacuation'
+      path: '/evacuation'
+      fullPath: '/evacuation'
+      preLoaderRoute: typeof DashboardEvacuationRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/alerts': {
+      id: '/_dashboard/alerts'
+      path: '/alerts'
+      fullPath: '/alerts'
+      preLoaderRoute: typeof DashboardAlertsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 
+interface DashboardRouteChildren {
+  DashboardAlertsRoute: typeof DashboardAlertsRoute
+  DashboardEvacuationRoute: typeof DashboardEvacuationRoute
+  DashboardOverviewRoute: typeof DashboardOverviewRoute
+  DashboardReportsRoute: typeof DashboardReportsRoute
+  DashboardResourcesRoute: typeof DashboardResourcesRoute
+  DashboardRiskMapRoute: typeof DashboardRiskMapRoute
+  DashboardSettingsRoute: typeof DashboardSettingsRoute
+  DashboardSimulationRoute: typeof DashboardSimulationRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardAlertsRoute: DashboardAlertsRoute,
+  DashboardEvacuationRoute: DashboardEvacuationRoute,
+  DashboardOverviewRoute: DashboardOverviewRoute,
+  DashboardReportsRoute: DashboardReportsRoute,
+  DashboardResourcesRoute: DashboardResourcesRoute,
+  DashboardRiskMapRoute: DashboardRiskMapRoute,
+  DashboardSettingsRoute: DashboardSettingsRoute,
+  DashboardSimulationRoute: DashboardSimulationRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardRoute: DashboardRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
+  RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RoleSelectionRoute: RoleSelectionRoute,
   VerifyOtpRoute: VerifyOtpRoute,
