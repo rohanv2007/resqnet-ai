@@ -147,3 +147,13 @@ export const listAlerts = createServerFn({ method: "GET" })
     if (error) throw error;
     return data ?? [];
   });
+
+export const getSubscriberCount = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { count } = await supabaseAdmin
+      .from("telegram_subscribers")
+      .select("chat_id", { count: "exact", head: true })
+      .eq("active", true);
+    return { count: count ?? 0 };
+  });
