@@ -67,6 +67,8 @@ const DICT: Record<string, Dict> = {
     tamil: "கனமழை எதிர்பார்க்கப்படுகிறது",
     telugu: "భారీ వర్షం అంచనా",
     bengali: "ভারী বৃষ্টিপাতের সম্ভাবনা",
+    odia: "ଭାରୀ ବର୍ଷା ସମ୍ଭାବନା",
+  },
   "immediately": {
     hindi: "तुरंत",
     malayalam: "ഉടനെ",
