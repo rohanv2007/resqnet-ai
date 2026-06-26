@@ -46,12 +46,15 @@ export default function LeafletMap({
   shelters = [],
   reports = [],
   routeSegments = [],
+  routePolyline,
+  originMarker,
   simulationZones = [],
   onFeatureSelect,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const simLayerRef = useRef<L.LayerGroup | null>(null);
+  const routeLayerRef = useRef<L.LayerGroup | null>(null);
 
   useEffect(() => {
     const container = containerRef.current as LeafletElement | null;
@@ -142,8 +145,9 @@ export default function LeafletMap({
         .addTo(map);
     });
 
-    // Dedicated layer for animated simulation zones — updated in a separate effect.
+    // Dedicated layers — updated by separate effects (so they don't rebuild the map).
     simLayerRef.current = L.layerGroup().addTo(map);
+    routeLayerRef.current = L.layerGroup().addTo(map);
 
     const invalidate = window.setTimeout(() => map.invalidateSize(), 0);
 
@@ -152,6 +156,7 @@ export default function LeafletMap({
       map.remove();
       mapRef.current = null;
       simLayerRef.current = null;
+      routeLayerRef.current = null;
       delete container._leaflet_id;
     };
   }, [
@@ -190,6 +195,34 @@ export default function LeafletMap({
       }).addTo(layer);
     });
   }, [simulationZones]);
+
+  // Route polyline + origin marker, animated separately so changing the destination
+  // does not rebuild the entire map.
+  useEffect(() => {
+    const layer = routeLayerRef.current;
+    const map = mapRef.current;
+    if (!layer || !map) return;
+    layer.clearLayers();
+    if (originMarker) {
+      L.marker([originMarker.lat, originMarker.lng], {
+        icon: markerIcon("O", "#2563EB"),
+      })
+        .bindPopup(originMarker.label ?? "Origin")
+        .addTo(layer);
+    }
+    if (routePolyline && routePolyline.coordinates.length > 1) {
+      const safety = routePolyline.safety ?? "safe";
+      const line = L.polyline(routePolyline.coordinates, {
+        color: routeColors[safety],
+        weight: 5,
+        opacity: 0.85,
+      }).addTo(layer);
+      if (routePolyline.label) line.bindPopup(routePolyline.label);
+      map.fitBounds(line.getBounds(), { padding: [40, 40], maxZoom: 15 });
+    }
+  }, [routePolyline, originMarker]);
+
+
 
 
   return (
