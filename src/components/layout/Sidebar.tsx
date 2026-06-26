@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/hooks/useAuth";
 
 const navItems = [
   { href: "/overview", label: "Overview", icon: Gauge },
+  { href: "/live", label: "Live Backend", icon: Waves },
   { href: "/risk-map", label: "Risk Map", icon: Map },
   { href: "/simulation", label: "Simulation", icon: ChartNoAxesCombined },
   { href: "/evacuation", label: "Evacuation", icon: Route },
