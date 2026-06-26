@@ -168,8 +168,8 @@ function Page_simulation() {
     seededRef.current = true;
     setParams((p) => ({
       ...p,
-      rainfall_mm: Math.max(p.rainfall_mm, Math.round((weather.precip_mm ?? 0) * 6 + 30)),
-      wind_speed_kmh: Math.max(p.wind_speed_kmh, Math.round(weather.wind_kmh ?? 30)),
+      rainfall_mm: Math.max(p.rainfall_mm, Math.round((weather.rainfall_mm_24h ?? 0) + 30)),
+      wind_speed_kmh: Math.max(p.wind_speed_kmh, Math.round(weather.wind_speed_kmh ?? 30)),
     }));
   }, [weather]);
 
@@ -362,7 +362,7 @@ function Page_simulation() {
               <p className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Activity className="h-3.5 w-3.5" />
                 Seeded from live weather: {Math.round(weather.temperature_c ?? 0)}°C,
-                {" "}{Math.round(weather.wind_kmh ?? 0)} km/h wind
+                {" "}{Math.round(weather.wind_speed_kmh ?? 0)} km/h wind
               </p>
             )}
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
