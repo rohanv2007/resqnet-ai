@@ -21,9 +21,7 @@ export interface MapViewProps {
   onFeatureSelect?: (feature: MapFeature) => void;
 }
 
-const LeafletMap = lazy(() =>
-  import("./LeafletMap").then((m) => ({ default: m.LeafletMap })),
-);
+const LeafletMap = lazy(() => import("./LeafletMap"));
 
 export function MapView(props: MapViewProps) {
   const [mounted, setMounted] = useState(false);

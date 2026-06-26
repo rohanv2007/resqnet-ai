@@ -1,6 +1,4 @@
-
-import Link from "@tanstack/react-router";
-import { useRouter } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -20,7 +18,7 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { login, setDemoRole } = useAuth();
   const {
     register,
@@ -40,14 +38,14 @@ export function LoginForm() {
     toast.success("Session restored", {
       description: "Opening the ResQNet operations dashboard.",
     });
-    router.replace("/overview");
+    navigate({ to: "/overview", replace: true });
   }
 
   function handleDemoUser(user: User) {
     setValue("identifier", user.email ?? user.mobile ?? "");
     setValue("password", "demo1234");
     setDemoRole(user.role);
-    router.replace("/overview");
+    navigate({ to: "/overview", replace: true });
   }
 
   return (
@@ -62,7 +60,7 @@ export function LoginForm() {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="password">Password</Label>
-          <Link href="/forgot-password" className="text-xs text-brand">
+          <Link to="/forgot-password" className="text-xs text-brand">
             Forgot password?
           </Link>
         </div>
@@ -95,7 +93,7 @@ export function LoginForm() {
       </div>
       <p className="text-center text-sm text-muted-foreground">
         New control room?{" "}
-        <Link className="font-medium text-brand" href="/register">
+        <Link className="font-medium text-brand" to="/register">
           Register access
         </Link>
       </p>
