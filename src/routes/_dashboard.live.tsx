@@ -122,6 +122,7 @@ function WeatherCard({ loc }: { loc: { lat: number; lng: number; name: string } 
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
         {isLoading && <p>Loading...</p>}
+        {error && <Badge variant="destructive">Error: {String((error as Error).message || error)}</Badge>}
         {data && (
           <>
             <div className="grid grid-cols-2 gap-2">
