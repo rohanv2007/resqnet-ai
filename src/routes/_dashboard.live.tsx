@@ -106,9 +106,10 @@ function DashboardSummaryCard() {
 
 function WeatherCard({ loc }: { loc: { lat: number; lng: number; name: string } }) {
   const fn = useServerFn(getWeather);
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ["live:weather", loc.lat, loc.lng],
     queryFn: () => fn({ data: { lat: loc.lat, lng: loc.lng } }),
+    retry: 1,
   });
   return (
     <Card>
@@ -121,6 +122,7 @@ function WeatherCard({ loc }: { loc: { lat: number; lng: number; name: string } 
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
         {isLoading && <p>Loading...</p>}
+        {error && <Badge variant="destructive">Error: {String((error as Error).message || error)}</Badge>}
         {data && (
           <>
             <div className="grid grid-cols-2 gap-2">

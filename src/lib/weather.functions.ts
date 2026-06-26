@@ -34,22 +34,8 @@ export const getWeather = createServerFn({ method: "GET" })
     // Sum rainfall over next 24 hourly slots for risk model
     const rainfall_mm_24h = (json.hourly?.precipitation ?? []).slice(0, 24).reduce((a, b) => a + b, 0);
 
-    // Persist a snapshot for analytics (best-effort)
-    try {
-      const { createClient } = await import("@supabase/supabase-js");
-      const supa = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
-        auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
-      });
-      await supa.from("weather_snapshots").insert({
-        lat: data.lat, lng: data.lng,
-        temperature: json.current?.temperature_2m ?? null,
-        rainfall_mm: rainfall_mm_24h,
-        wind_speed_kmh: json.current?.wind_speed_10m ?? null,
-        humidity: json.current?.relative_humidity_2m ?? null,
-        pressure: json.current?.pressure_msl ?? null,
-        source: "open-meteo",
-      });
-    } catch { /* non-fatal */ }
+    // (Removed best-effort snapshot insert — was a source of intermittent failures.)
+
 
     return {
       current: {

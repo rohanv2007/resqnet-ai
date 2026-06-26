@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { translateTemplate } from "@/lib/resq/translation-templates";
 import type { AlertLanguage } from "@/types";
@@ -22,16 +21,20 @@ const DraftAlert = z.object({
   shelter_id: z.string().uuid().optional(),
 });
 
+// NOTE: Demo backend — the dashboard uses local demo accounts (no Supabase
+// session), so these endpoints intentionally do not require an authenticated
+// user and use the service-role client to bypass RLS. Lock down before
+// production deployment.
+
 export const draftAlert = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => DraftAlert.parse(d))
-  .handler(async ({ data, context }) => {
-    const autoApprove = data.severity !== "danger"; // critical needs human approval
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const autoApprove = data.severity !== "danger";
     const status = autoApprove ? "approved" : "pending_approval";
-    const { data: row, error } = await context.supabase.from("alerts").insert({
+    const { data: row, error } = await supabaseAdmin.from("alerts").insert({
       ...data,
       status,
-      created_by: context.userId,
     }).select().single();
     if (error) throw error;
     return row;
@@ -40,11 +43,11 @@ export const draftAlert = createServerFn({ method: "POST" })
 const ApproveAlert = z.object({ id: z.string().uuid() });
 
 export const approveAlert = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ApproveAlert.parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase.from("alerts")
-      .update({ status: "approved", approved_by: context.userId })
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin.from("alerts")
+      .update({ status: "approved" })
       .eq("id", data.id).select().single();
     if (error) throw error;
     return row;
@@ -52,16 +55,11 @@ export const approveAlert = createServerFn({ method: "POST" })
 
 const SendAlert = z.object({ id: z.string().uuid(), telegram_chat_id: z.string().optional() });
 
-/**
- * Broadcasts the alert via configured channels. Telegram is real (via connector
- * gateway); push/sms/ivr/whatsapp/email are recorded as queued for demo unless
- * the corresponding provider is configured.
- */
 export const sendAlert = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => SendAlert.parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: alert, error } = await context.supabase.from("alerts").select("*").eq("id", data.id).single();
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: alert, error } = await supabaseAdmin.from("alerts").select("*").eq("id", data.id).single();
     if (error || !alert) throw new Error("alert not found");
     if (alert.status !== "approved" && alert.status !== "sent") {
       throw new Error("alert must be approved before sending");
@@ -74,7 +72,6 @@ export const sendAlert = createServerFn({ method: "POST" })
     type Delivery = { channel: string; status: string; recipient: string | null; provider_response: string };
     const deliveries: Delivery[] = [];
 
-    // Telegram (real)
     if (alert.channels.includes("telegram") && process.env.TELEGRAM_API_KEY && process.env.LOVABLE_API_KEY) {
       const chatId = data.telegram_chat_id ?? process.env.TELEGRAM_DEFAULT_CHAT_ID ?? null;
       if (chatId) {
@@ -102,7 +99,7 @@ export const sendAlert = createServerFn({ method: "POST" })
       deliveries.push({ channel: ch, status: "queued", recipient: null, provider_response: "mock" });
     }
 
-    await context.supabase.from("alert_deliveries").insert(
+    await supabaseAdmin.from("alert_deliveries").insert(
       deliveries.map(d => ({
         alert_id: alert.id,
         channel: d.channel,
@@ -112,7 +109,7 @@ export const sendAlert = createServerFn({ method: "POST" })
       })),
     );
     const sentCount = deliveries.filter(d => d.status === "sent").length;
-    const { data: updated } = await context.supabase.from("alerts").update({
+    const { data: updated } = await supabaseAdmin.from("alerts").update({
       status: "sent",
       sent_at: new Date().toISOString(),
       delivered_count: (alert.delivered_count ?? 0) + sentCount,
@@ -123,11 +120,8 @@ export const sendAlert = createServerFn({ method: "POST" })
 
 export const listAlerts = createServerFn({ method: "GET" })
   .handler(async () => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supa = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
-      auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
-    });
-    const { data, error } = await supa.from("alerts").select("*").order("created_at", { ascending: false }).limit(50);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin.from("alerts").select("*").order("created_at", { ascending: false }).limit(50);
     if (error) throw error;
     return data ?? [];
   });

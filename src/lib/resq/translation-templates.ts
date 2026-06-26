@@ -42,16 +42,55 @@ const DICT: Record<string, Dict> = {
     malayalam: "ഉടനെ ഒഴിപ്പിക്കുക",
     tamil: "உடனடியாக வெளியேறவும்",
     telugu: "వెంటనే ఖాళీ చేయండి",
+    bengali: "অবিলম্বে সরে যান",
+    odia: "ତୁରନ୍ତ ସ୍ଥାନାନ୍ତର ହୁଅନ୍ତୁ",
+  },
+  "nearest shelter immediately": {
+    hindi: "तुरंत निकटतम आश्रय स्थल पर",
+    malayalam: "ഉടനെ ഏറ്റവും അടുത്ത അഭയകേന്ദ്രത്തിലേക്ക്",
+    tamil: "உடனடியாக அருகிலுள்ள புகலிடத்திற்கு",
+    telugu: "వెంటనే సమీప ఆశ్రయానికి",
+    bengali: "অবিলম্বে নিকটতম আশ্রয়ে",
+    odia: "ତୁରନ୍ତ ନିକଟବର୍ତ୍ତୀ ଆଶ୍ରୟକୁ",
+  },
+  "Move to": {
+    hindi: "जाएँ —",
+    malayalam: "പോകുക —",
+    tamil: "செல்லவும் —",
+    telugu: "తరలండి —",
+    bengali: "যান —",
+    odia: "ଯାଆନ୍ତୁ —",
+  },
+  "Heavy rainfall expected": {
+    hindi: "भारी वर्षा की संभावना",
+    malayalam: "കനത്ത മഴ പ്രതീക്ഷിക്കുന്നു",
+    tamil: "கனமழை எதிர்பார்க்கப்படுகிறது",
+    telugu: "భారీ వర్షం అంచనా",
+    bengali: "ভারী বৃষ্টিপাতের সম্ভাবনা",
+    odia: "ଭାରୀ ବର୍ଷା ସମ୍ଭାବନା",
+  },
+  "immediately": {
+    hindi: "तुरंत",
+    malayalam: "ഉടനെ",
+    tamil: "உடனடியாக",
+    telugu: "వెంటనే",
+    bengali: "অবিলম্বে",
+    odia: "ତୁରନ୍ତ",
   },
 };
 
 export function translateTemplate(text: string, target: AlertLanguage): string {
   if (target === "english") return text;
-  for (const [en, dict] of Object.entries(DICT)) {
-    if (text.toLowerCase().includes(en.toLowerCase()) && dict[target]) {
-      return text.replace(new RegExp(en, "i"), dict[target]!);
-    }
+  let out = text;
+  // Replace every matching English phrase. Sort by length DESC so longer
+  // phrases (e.g. "Move to nearest shelter immediately") match before shorter
+  // overlapping ones (e.g. "Move to", "immediately").
+  const entries = Object.entries(DICT).sort((a, b) => b[0].length - a[0].length);
+  for (const [en, dict] of entries) {
+    const translated = dict[target];
+    if (!translated) continue;
+    const re = new RegExp(en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+    out = out.replace(re, translated);
   }
-  // Fallback: return original with language tag so caller knows we didn't translate
-  return text;
+  return out;
 }
