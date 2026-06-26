@@ -109,7 +109,10 @@ function WeatherCard({ loc }: { loc: { lat: number; lng: number; name: string } 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ["live:weather", loc.lat, loc.lng],
     queryFn: () => fn({ data: { lat: loc.lat, lng: loc.lng } }),
-    retry: 1,
+    retry: 3,
+    retryDelay: (i) => Math.min(1000 * 2 ** i, 8000),
+    staleTime: 10 * 60 * 1000,
+    refetchOnMount: "always",
   });
   return (
     <Card>
