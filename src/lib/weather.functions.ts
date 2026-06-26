@@ -10,9 +10,19 @@ const LatLngSchema = z.object({
  * Real-time current weather + 3-day forecast from Open-Meteo (free, no key).
  * Docs: https://open-meteo.com/en/docs
  */
+// Simple in-memory cache to avoid Open-Meteo 429s (free tier ~600 req/min, but
+// the dashboard fans out per panel + per location, so we cache per coord.).
+const WEATHER_CACHE = new Map<string, { at: number; payload: unknown }>();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
 export const getWeather = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => LatLngSchema.parse(d))
   .handler(async ({ data }) => {
+    const key = `${data.lat.toFixed(2)},${data.lng.toFixed(2)}`;
+    const cached = WEATHER_CACHE.get(key);
+    if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+      return cached.payload as never;
+    }
     const params = new URLSearchParams({
       latitude: String(data.lat),
       longitude: String(data.lng),
@@ -24,7 +34,15 @@ export const getWeather = createServerFn({ method: "GET" })
     });
     const url = `https://api.open-meteo.com/v1/forecast?${params}`;
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`Open-Meteo error ${res.status}`);
+    if (!res.ok) {
+      // On 429, serve last cached value if available, even if stale.
+      if (cached) return cached.payload as never;
+      throw new Error(
+        res.status === 429
+          ? "Open-Meteo rate-limited (429). Try again in a minute."
+          : `Open-Meteo error ${res.status}`,
+      );
+    }
     const json = await res.json() as {
       current?: Record<string, number>;
       hourly?: { time: string[]; precipitation: number[]; temperature_2m: number[]; wind_speed_10m: number[] };
