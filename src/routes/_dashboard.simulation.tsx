@@ -303,34 +303,45 @@ function Page_simulation() {
               })}
             </div>
 
-            {(
-              [
+            {(() => {
+              const ALL = [
                 ["rainfall_mm", "Rainfall (24h)", "mm", 300],
                 ["wind_speed_kmh", "Wind Speed", "km/h", 250],
                 ["river_level_pct", "River Level", "%", 200],
                 ["fire_spread_rate", "Fire Spread", "%", 100],
                 ["earthquake_magnitude", "Earthquake M", "", 10],
-              ] as const
-            ).map(([key, label, suffix, max]) => (
-              <div key={key} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>{label}</Label>
-                  <span className="font-mono text-sm">
-                    {params[key]}
-                    {suffix}
-                  </span>
+              ] as const;
+              const RELEVANT: Record<DisasterType, ReadonlyArray<typeof ALL[number][0]>> = {
+                flood: ["rainfall_mm", "river_level_pct", "wind_speed_kmh"],
+                rainfall: ["rainfall_mm", "wind_speed_kmh"],
+                cyclone: ["wind_speed_kmh", "rainfall_mm"],
+                urban_fire: ["fire_spread_rate", "wind_speed_kmh"],
+                wildfire: ["fire_spread_rate", "wind_speed_kmh"],
+                earthquake: ["earthquake_magnitude"],
+              };
+              const keys = RELEVANT[params.disaster];
+              return ALL.filter(([k]) => keys.includes(k)).map(([key, label, suffix, max]) => (
+                <div key={key} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>{label}</Label>
+                    <span className="font-mono text-sm">
+                      {params[key]}
+                      {suffix}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[params[key]]}
+                    max={max}
+                    step={key === "earthquake_magnitude" ? 0.1 : 1}
+                    onValueChange={(v) => {
+                      const nv = Array.isArray(v) ? v[0] ?? 0 : v;
+                      setParams((c) => ({ ...c, [key]: nv }));
+                    }}
+                  />
                 </div>
-                <Slider
-                  value={[params[key]]}
-                  max={max}
-                  step={key === "earthquake_magnitude" ? 0.1 : 1}
-                  onValueChange={(v) => {
-                    const nv = Array.isArray(v) ? v[0] ?? 0 : v;
-                    setParams((c) => ({ ...c, [key]: nv }));
-                  }}
-                />
-              </div>
-            ))}
+              ));
+            })()}
+
 
             <div className="space-y-3">
               <Label>Time Horizon</Label>
