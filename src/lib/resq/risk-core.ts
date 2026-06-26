@@ -25,6 +25,9 @@ export interface RiskInputs {
   distance_to_coast_km?: number | null;
   distance_to_river_km?: number | null;
   population_density?: number | null;
+  recent_quake_count?: number;     // last 7 days within ~300 km
+  max_quake_magnitude?: number;    // largest M in window
+  nearest_quake_km?: number | null;
 }
 
 export interface RiskOutput {
