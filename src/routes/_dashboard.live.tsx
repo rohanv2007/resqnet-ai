@@ -18,7 +18,7 @@ import { getWeather } from "@/lib/weather.functions";
 import { getFireHotspots } from "@/lib/firms.functions";
 import { predictRisk } from "@/lib/risk.functions";
 import { getEvacuationRoute, getNearbyShelters } from "@/lib/routing.functions";
-import { draftAlert, sendAlert, listAlerts } from "@/lib/alerts.functions";
+import { draftAlert, sendAlert, listAlerts, getSubscriberCount } from "@/lib/alerts.functions";
 import { translateText } from "@/lib/translate.functions";
 
 export const Route = createFileRoute("/_dashboard/live")({
