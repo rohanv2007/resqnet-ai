@@ -47,11 +47,13 @@ const DICT: Record<string, Dict> = {
 
 export function translateTemplate(text: string, target: AlertLanguage): string {
   if (target === "english") return text;
+  let out = text;
+  // Replace every matching English phrase, not just the first one.
   for (const [en, dict] of Object.entries(DICT)) {
-    if (text.toLowerCase().includes(en.toLowerCase()) && dict[target]) {
-      return text.replace(new RegExp(en, "i"), dict[target]!);
-    }
+    const translated = dict[target];
+    if (!translated) continue;
+    const re = new RegExp(en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+    out = out.replace(re, translated);
   }
-  // Fallback: return original with language tag so caller knows we didn't translate
-  return text;
+  return out;
 }
