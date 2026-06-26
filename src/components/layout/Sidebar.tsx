@@ -1,6 +1,4 @@
-
-import Link from "@tanstack/react-router";
-import { usePathname } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Bell,
   ChartNoAxesCombined,
@@ -32,13 +30,13 @@ const navItems = [
 ];
 
 export function Sidebar() {
-  const pathname = usePathname();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { logout } = useAuth();
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 border-r bg-sidebar lg:block">
       <div className="flex h-full flex-col">
-        <Link href="/overview" className="flex h-16 items-center gap-3 px-5">
+        <Link to="/overview" className="flex h-16 items-center gap-3 px-5">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white">
             <Shield className="h-5 w-5" />
           </span>
@@ -60,7 +58,7 @@ export function Sidebar() {
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                to={item.href}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   active

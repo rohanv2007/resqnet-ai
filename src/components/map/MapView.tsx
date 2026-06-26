@@ -1,5 +1,4 @@
-
-import dynamic from "next/dynamic";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { LoadingSkeleton } from "@/components/shared";
 import type { CitizenReport, RiskZone, RouteSegment, Shelter } from "@/types";
 
@@ -22,11 +21,17 @@ export interface MapViewProps {
   onFeatureSelect?: (feature: MapFeature) => void;
 }
 
-const LeafletMap = dynamic(() => import("./LeafletMap"), {
-  ssr: false,
-  loading: () => <LoadingSkeleton variant="map" />,
-});
+const LeafletMap = lazy(() =>
+  import("./LeafletMap").then((m) => ({ default: m.default ?? m.LeafletMap ?? (m as any) })),
+);
 
 export function MapView(props: MapViewProps) {
-  return <LeafletMap {...props} />;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <LoadingSkeleton variant="map" />;
+  return (
+    <Suspense fallback={<LoadingSkeleton variant="map" />}>
+      <LeafletMap {...props} />
+    </Suspense>
+  );
 }

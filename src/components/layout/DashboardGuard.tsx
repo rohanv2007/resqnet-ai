@@ -1,24 +1,29 @@
-
-import { useEffect, useSyncExternalStore } from "react";
-import { usePathname, useRouter } from "@tanstack/react-router";
+import { useEffect, useState, type ReactNode } from "react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { LoadingSkeleton } from "@/components/shared";
 import { useAuth } from "@/lib/hooks/useAuth";
 
-export function DashboardGuard({ children }: { children: React.ReactNode }) {
+export function DashboardGuard({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
-  const isClient = useIsClient();
-  const router = useRouter();
-  const pathname = usePathname();
+  const [isClient, setIsClient] = useState(false);
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     if (isClient && !isLoading && !user) {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      navigate({
+        to: "/login",
+        search: { next: pathname },
+        replace: true,
+      });
     }
-  }, [isClient, isLoading, pathname, router, user]);
+  }, [isClient, isLoading, pathname, navigate, user]);
 
-  if (!isClient) {
-    return null;
-  }
+  if (!isClient) return null;
 
   if (isLoading || !user) {
     return (
@@ -31,13 +36,5 @@ export function DashboardGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return children;
-}
-
-function useIsClient() {
-  return useSyncExternalStore(
-    () => () => undefined,
-    () => true,
-    () => false,
-  );
+  return <>{children}</>;
 }

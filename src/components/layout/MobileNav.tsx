@@ -1,5 +1,4 @@
-
-import Link from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import {
   Bell,
   ChartNoAxesCombined,
@@ -35,9 +34,11 @@ const items = [
 export function MobileNav() {
   return (
     <Sheet>
-      <SheetTrigger render={<Button variant="outline" size="icon" />}>
-        <Menu className="h-4 w-4" />
-        <span className="sr-only">Open navigation</span>
+      <SheetTrigger asChild>
+        <Button variant="outline" size="icon">
+          <Menu className="h-4 w-4" />
+          <span className="sr-only">Open navigation</span>
+        </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-80">
         <SheetHeader>
@@ -54,7 +55,7 @@ export function MobileNav() {
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                to={item.href}
                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Icon className="h-4 w-4" />
