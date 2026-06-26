@@ -300,7 +300,9 @@ function AlertCard() {
   const draft = useServerFn(draftAlert);
   const send = useServerFn(sendAlert);
   const list = useServerFn(listAlerts);
+  const subsFn = useServerFn(getSubscriberCount);
   const { data: alerts, refetch } = useQuery({ queryKey: ["live:alerts"], queryFn: () => list() });
+  const { data: subs, refetch: refetchSubs } = useQuery({ queryKey: ["live:subs"], queryFn: () => subsFn(), refetchInterval: 15000 });
   const [chatId, setChatId] = useState("");
   const [title, setTitle] = useState("Flood risk in your area");
   const [message, setMessage] = useState("Heavy rainfall expected. Move to nearest shelter immediately.");
