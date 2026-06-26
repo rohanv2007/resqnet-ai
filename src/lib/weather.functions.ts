@@ -15,13 +15,60 @@ const LatLngSchema = z.object({
 const WEATHER_CACHE = new Map<string, { at: number; payload: unknown }>();
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
+type WeatherPayload = {
+  current: {
+    temperature_c: number | null;
+    humidity: number | null;
+    precipitation_mm: number | null;
+    wind_speed_kmh: number | null;
+    pressure: number | null;
+  };
+  rainfall_mm_24h: number;
+  daily: Array<{ date: string; rainfall_mm: number; temp_max: number | null; temp_min: number | null; wind_max_kmh: number | null }>;
+  source: string;
+  fetched_at: string;
+  stale?: boolean;
+};
+
+async function loadFromSupabase(lat: number, lng: number): Promise<WeatherPayload | null> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("weather_snapshots")
+      .select("raw, created_at")
+      .gte("lat", lat - 0.05).lte("lat", lat + 0.05)
+      .gte("lng", lng - 0.05).lte("lng", lng + 0.05)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data?.raw) return { ...(data.raw as WeatherPayload), stale: true };
+  } catch { /* ignore */ }
+  return null;
+}
+
+async function saveToSupabase(lat: number, lng: number, payload: WeatherPayload) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("weather_snapshots").insert({
+      lat, lng,
+      source: payload.source,
+      temperature: payload.current.temperature_c,
+      humidity: payload.current.humidity,
+      wind_speed_kmh: payload.current.wind_speed_kmh,
+      pressure: payload.current.pressure,
+      rainfall_mm: payload.rainfall_mm_24h,
+      raw: payload as never,
+    });
+  } catch { /* ignore */ }
+}
+
 export const getWeather = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => LatLngSchema.parse(d))
   .handler(async ({ data }) => {
     const key = `${data.lat.toFixed(2)},${data.lng.toFixed(2)}`;
     const cached = WEATHER_CACHE.get(key);
     if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
-      return cached.payload as never;
+      return cached.payload as WeatherPayload;
     }
     const params = new URLSearchParams({
       latitude: String(data.lat),
@@ -32,25 +79,36 @@ export const getWeather = createServerFn({ method: "GET" })
       forecast_days: "3",
       timezone: "auto",
     });
-    const url = `https://api.open-meteo.com/v1/forecast?${params}`;
+    const hosts = [
+      "https://api.open-meteo.com/v1/forecast",
+      "https://customer-api.open-meteo.com/v1/forecast",
+    ];
     let res: Response | null = null;
     let lastErr: string | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        res = await fetch(url);
-        if (res.ok) break;
-        lastErr = `Open-Meteo ${res.status}`;
-        if (res.status !== 429 && res.status < 500) break;
-      } catch (e) {
-        lastErr = (e as Error).message;
+    outer: for (const host of hosts) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          res = await fetch(`${host}?${params}`, {
+            headers: { "User-Agent": "ResQNet/1.0 (disaster-alerts)" },
+          });
+          if (res.ok) break outer;
+          lastErr = `Open-Meteo ${res.status}`;
+          if (res.status !== 429 && res.status < 500) break;
+        } catch (e) {
+          lastErr = (e as Error).message;
+        }
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
       }
-      await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
     }
     if (!res || !res.ok) {
-      if (cached) return cached.payload as never;
-      // Last resort: serve any other cached coord (rough but avoids blank UI)
-      const any = WEATHER_CACHE.values().next().value;
-      if (any) return any.payload as never;
+      if (cached) return cached.payload as WeatherPayload;
+      const fromDb = await loadFromSupabase(data.lat, data.lng);
+      if (fromDb) {
+        WEATHER_CACHE.set(key, { at: Date.now(), payload: fromDb });
+        return fromDb;
+      }
+      const anyMem = WEATHER_CACHE.values().next().value;
+      if (anyMem) return anyMem.payload as WeatherPayload;
       throw new Error(lastErr ?? "Open-Meteo unavailable");
     }
     const json = await res.json() as {
@@ -59,13 +117,9 @@ export const getWeather = createServerFn({ method: "GET" })
       daily?: { time: string[]; precipitation_sum: number[]; temperature_2m_max: number[]; temperature_2m_min: number[]; wind_speed_10m_max: number[] };
     };
 
-    // Sum rainfall over next 24 hourly slots for risk model
     const rainfall_mm_24h = (json.hourly?.precipitation ?? []).slice(0, 24).reduce((a, b) => a + b, 0);
 
-    // (Removed best-effort snapshot insert — was a source of intermittent failures.)
-
-
-    const payload = {
+    const payload: WeatherPayload = {
       current: {
         temperature_c: json.current?.temperature_2m ?? null,
         humidity: json.current?.relative_humidity_2m ?? null,
@@ -85,5 +139,6 @@ export const getWeather = createServerFn({ method: "GET" })
       fetched_at: new Date().toISOString(),
     };
     WEATHER_CACHE.set(key, { at: Date.now(), payload });
+    void saveToSupabase(data.lat, data.lng, payload);
     return payload;
   });
