@@ -234,6 +234,13 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
         level: (r.status === "flooded" ? "danger" : "warning") as RiskLevel,
         label: r.name ?? `Road ${r.status}`,
       })),
+      ...quakes.slice(0, 8).map((q, i) => ({
+        id: `quake-${i}`,
+        lat: q.lat, lng: q.lng,
+        radius: Math.max(600, q.mag * 800),
+        level: (q.mag >= 5 ? "danger" : q.mag >= 4 ? "warning" : "watch") as RiskLevel,
+        label: `M${q.mag.toFixed(1)} quake — ${q.place}`,
+      })),
     ];
 
     // ---------- 7. Shape data to match existing UI types ----------
