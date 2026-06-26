@@ -142,6 +142,10 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
     const supa = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
       auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
     });
+    // citizen_reports and resources contain PII (reporter names, responder contact info)
+    // and are no longer publicly readable, so use the admin client for the server-side
+    // dashboard aggregation. Aggregated data is shaped before returning to the browser.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const [
       { data: rReports },
@@ -150,11 +154,11 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
       { data: rRoads },
       { data: rResources },
     ] = await Promise.all([
-      supa.from("citizen_reports").select("*").order("created_at", { ascending: false }).limit(100),
+      supabaseAdmin.from("citizen_reports").select("*").order("created_at", { ascending: false }).limit(100),
       supa.from("shelters").select("*").order("name"),
       supa.from("alerts").select("*").order("created_at", { ascending: false }).limit(50),
       supa.from("road_status").select("*").in("status", ["blocked", "flooded"]).limit(100),
-      supa.from("resources").select("*").order("updated_at", { ascending: false }).limit(100),
+      supabaseAdmin.from("resources").select("*").order("updated_at", { ascending: false }).limit(100),
     ]);
     activeSources.push("Lovable Cloud");
     activeSources.push("Citizen Reports");
