@@ -178,6 +178,7 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
         rainfall_mm_24h, wind_speed_kmh, temperature_c, humidity,
         nearby_fire_hotspots, nearby_verified_reports, blocked_roads_nearby,
         population_density: data.population,
+        recent_quake_count, max_quake_magnitude, nearest_quake_km,
       });
       return {
         type: disaster,
