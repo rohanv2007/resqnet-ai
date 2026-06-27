@@ -1,18 +1,23 @@
 
-import { Bell, Search, ShieldCheck } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Bell, Check, ChevronDown, Search, ShieldCheck } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { DataSourceIndicator } from "@/components/shared";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useLocation } from "@/lib/hooks/useLocation";
 import { useRiskData } from "@/lib/hooks/useRiskData";
+import { cn } from "@/lib/utils";
 import { MobileNav } from "./MobileNav";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -26,6 +31,18 @@ export function Topbar() {
   } = useLocation();
   const { activeSources } = useRiskData();
   const selectedStateCode = selectedLocation.id.split("-")[0].toUpperCase();
+  const [open, setOpen] = useState(false);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, typeof locations>();
+    for (const loc of locations) {
+      const code = loc.id.split("-")[0].toUpperCase();
+      const arr = map.get(code) ?? [];
+      arr.push(loc);
+      map.set(code, arr);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [locations]);
 
   return (
     <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
@@ -41,27 +58,51 @@ export function Topbar() {
             className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
           />
         </div>
-        <Select
-          value={selectedLocationId}
-          onValueChange={(value) => {
-            if (value) {
-              setSelectedLocationId(value);
-            }
-          }}
-        >
-          <SelectTrigger className="max-w-[210px] rounded-full bg-card">
-            <span className="truncate">
-              {selectedStateCode} - {selectedLocation.name}
-            </span>
-          </SelectTrigger>
-          <SelectContent align="end">
-            {locations.map((location) => (
-              <SelectItem key={location.id} value={location.id}>
-                {location.id.split("-")[0].toUpperCase()} - {location.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className="max-w-[210px] justify-between rounded-full bg-card"
+            >
+              <span className="truncate">
+                {selectedStateCode} - {selectedLocation.name}
+              </span>
+              <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-60" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-[280px] p-0">
+            <Command>
+              <CommandInput placeholder="Search city or state..." />
+              <CommandList className="max-h-[320px]">
+                <CommandEmpty>No location found.</CommandEmpty>
+                {grouped.map(([code, locs]) => (
+                  <CommandGroup key={code} heading={code}>
+                    {locs.map((location) => (
+                      <CommandItem
+                        key={location.id}
+                        value={`${code} ${location.name}`}
+                        onSelect={() => {
+                          setSelectedLocationId(location.id);
+                          setOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedLocationId === location.id ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                        {location.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                ))}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
         <DataSourceIndicator activeSources={activeSources} />
         <ThemeToggle />
         <Button variant="outline" size="icon" className="rounded-full">
@@ -92,3 +133,4 @@ export function Topbar() {
     </header>
   );
 }
+
