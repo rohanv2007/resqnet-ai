@@ -24,7 +24,6 @@ import { Route as DashboardRiskMapRouteImport } from './routes/_dashboard.risk-m
 import { Route as DashboardResourcesRouteImport } from './routes/_dashboard.resources'
 import { Route as DashboardReportsRouteImport } from './routes/_dashboard.reports'
 import { Route as DashboardOverviewRouteImport } from './routes/_dashboard.overview'
-import { Route as DashboardLiveRouteImport } from './routes/_dashboard.live'
 import { Route as DashboardEvacuationRouteImport } from './routes/_dashboard.evacuation'
 import { Route as DashboardEarthquakesRouteImport } from './routes/_dashboard.earthquakes'
 import { Route as DashboardAlertsRouteImport } from './routes/_dashboard.alerts'
@@ -105,11 +104,6 @@ const DashboardOverviewRoute = DashboardOverviewRouteImport.update({
   path: '/overview',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardLiveRoute = DashboardLiveRouteImport.update({
-  id: '/live',
-  path: '/live',
-  getParentRoute: () => DashboardRoute,
-} as any)
 const DashboardEvacuationRoute = DashboardEvacuationRouteImport.update({
   id: '/evacuation',
   path: '/evacuation',
@@ -150,7 +144,6 @@ export interface FileRoutesByFullPath {
   '/alerts': typeof DashboardAlertsRoute
   '/earthquakes': typeof DashboardEarthquakesRoute
   '/evacuation': typeof DashboardEvacuationRoute
-  '/live': typeof DashboardLiveRoute
   '/overview': typeof DashboardOverviewRoute
   '/reports': typeof DashboardReportsRoute
   '/resources': typeof DashboardResourcesRoute
@@ -172,7 +165,6 @@ export interface FileRoutesByTo {
   '/alerts': typeof DashboardAlertsRoute
   '/earthquakes': typeof DashboardEarthquakesRoute
   '/evacuation': typeof DashboardEvacuationRoute
-  '/live': typeof DashboardLiveRoute
   '/overview': typeof DashboardOverviewRoute
   '/reports': typeof DashboardReportsRoute
   '/resources': typeof DashboardResourcesRoute
@@ -196,7 +188,6 @@ export interface FileRoutesById {
   '/_dashboard/alerts': typeof DashboardAlertsRoute
   '/_dashboard/earthquakes': typeof DashboardEarthquakesRoute
   '/_dashboard/evacuation': typeof DashboardEvacuationRoute
-  '/_dashboard/live': typeof DashboardLiveRoute
   '/_dashboard/overview': typeof DashboardOverviewRoute
   '/_dashboard/reports': typeof DashboardReportsRoute
   '/_dashboard/resources': typeof DashboardResourcesRoute
@@ -220,7 +211,6 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/earthquakes'
     | '/evacuation'
-    | '/live'
     | '/overview'
     | '/reports'
     | '/resources'
@@ -242,7 +232,6 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/earthquakes'
     | '/evacuation'
-    | '/live'
     | '/overview'
     | '/reports'
     | '/resources'
@@ -265,7 +254,6 @@ export interface FileRouteTypes {
     | '/_dashboard/alerts'
     | '/_dashboard/earthquakes'
     | '/_dashboard/evacuation'
-    | '/_dashboard/live'
     | '/_dashboard/overview'
     | '/_dashboard/reports'
     | '/_dashboard/resources'
@@ -397,13 +385,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardOverviewRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/live': {
-      id: '/_dashboard/live'
-      path: '/live'
-      fullPath: '/live'
-      preLoaderRoute: typeof DashboardLiveRouteImport
-      parentRoute: typeof DashboardRoute
-    }
     '/_dashboard/evacuation': {
       id: '/_dashboard/evacuation'
       path: '/evacuation'
@@ -446,7 +427,6 @@ interface DashboardRouteChildren {
   DashboardAlertsRoute: typeof DashboardAlertsRoute
   DashboardEarthquakesRoute: typeof DashboardEarthquakesRoute
   DashboardEvacuationRoute: typeof DashboardEvacuationRoute
-  DashboardLiveRoute: typeof DashboardLiveRoute
   DashboardOverviewRoute: typeof DashboardOverviewRoute
   DashboardReportsRoute: typeof DashboardReportsRoute
   DashboardResourcesRoute: typeof DashboardResourcesRoute
@@ -459,7 +439,6 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAlertsRoute: DashboardAlertsRoute,
   DashboardEarthquakesRoute: DashboardEarthquakesRoute,
   DashboardEvacuationRoute: DashboardEvacuationRoute,
-  DashboardLiveRoute: DashboardLiveRoute,
   DashboardOverviewRoute: DashboardOverviewRoute,
   DashboardReportsRoute: DashboardReportsRoute,
   DashboardResourcesRoute: DashboardResourcesRoute,
