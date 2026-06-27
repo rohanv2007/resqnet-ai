@@ -63,7 +63,9 @@ async function getSub(chatId: number): Promise<Sub | null> {
   return (data as Sub | null) ?? null;
 }
 
-function classifyReportType(text: string): string {
+type DbReportType = "rising_water"|"blocked_road"|"fire"|"damaged_bridge"|"shelter_overcrowding"|"power_failure"|"medical_help"|"trapped_people"|"other";
+
+function classifyReportType(text: string): DbReportType {
   const t = text.toLowerCase();
   if (/(flood|water|rain|overflow|inundat)/.test(t)) return "rising_water";
   if (/(fire|smoke|burn|blaze)/.test(t)) return "fire";
