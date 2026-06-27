@@ -33,7 +33,7 @@ export interface CityRisk {
   level: Severity;
 }
 
-interface StateRisk {
+export interface StateRisk {
   state: string;
   population: number;
   max: number;
@@ -42,14 +42,14 @@ interface StateRisk {
   level: Severity;
 }
 
-interface SourceStatus {
+export interface SourceStatus {
   id: string;
   name: string;
   status: string;
   events: number;
 }
 
-interface IndiaRiskBundle {
+export interface IndiaRiskBundle {
   fetched_at: string;
   points: HazardPoint[];
   cityRisks: CityRisk[];
