@@ -26,6 +26,7 @@ import { Route as DashboardReportsRouteImport } from './routes/_dashboard.report
 import { Route as DashboardOverviewRouteImport } from './routes/_dashboard.overview'
 import { Route as DashboardLiveRouteImport } from './routes/_dashboard.live'
 import { Route as DashboardEvacuationRouteImport } from './routes/_dashboard.evacuation'
+import { Route as DashboardEarthquakesRouteImport } from './routes/_dashboard.earthquakes'
 import { Route as DashboardAlertsRouteImport } from './routes/_dashboard.alerts'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 
@@ -113,6 +114,11 @@ const DashboardEvacuationRoute = DashboardEvacuationRouteImport.update({
   path: '/evacuation',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardEarthquakesRoute = DashboardEarthquakesRouteImport.update({
+  id: '/earthquakes',
+  path: '/earthquakes',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardAlertsRoute = DashboardAlertsRouteImport.update({
   id: '/alerts',
   path: '/alerts',
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/role-selection': typeof RoleSelectionRoute
   '/verify-otp': typeof VerifyOtpRoute
   '/alerts': typeof DashboardAlertsRoute
+  '/earthquakes': typeof DashboardEarthquakesRoute
   '/evacuation': typeof DashboardEvacuationRoute
   '/live': typeof DashboardLiveRoute
   '/overview': typeof DashboardOverviewRoute
@@ -155,6 +162,7 @@ export interface FileRoutesByTo {
   '/role-selection': typeof RoleSelectionRoute
   '/verify-otp': typeof VerifyOtpRoute
   '/alerts': typeof DashboardAlertsRoute
+  '/earthquakes': typeof DashboardEarthquakesRoute
   '/evacuation': typeof DashboardEvacuationRoute
   '/live': typeof DashboardLiveRoute
   '/overview': typeof DashboardOverviewRoute
@@ -177,6 +185,7 @@ export interface FileRoutesById {
   '/role-selection': typeof RoleSelectionRoute
   '/verify-otp': typeof VerifyOtpRoute
   '/_dashboard/alerts': typeof DashboardAlertsRoute
+  '/_dashboard/earthquakes': typeof DashboardEarthquakesRoute
   '/_dashboard/evacuation': typeof DashboardEvacuationRoute
   '/_dashboard/live': typeof DashboardLiveRoute
   '/_dashboard/overview': typeof DashboardOverviewRoute
@@ -199,6 +208,7 @@ export interface FileRouteTypes {
     | '/role-selection'
     | '/verify-otp'
     | '/alerts'
+    | '/earthquakes'
     | '/evacuation'
     | '/live'
     | '/overview'
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/role-selection'
     | '/verify-otp'
     | '/alerts'
+    | '/earthquakes'
     | '/evacuation'
     | '/live'
     | '/overview'
@@ -240,6 +251,7 @@ export interface FileRouteTypes {
     | '/role-selection'
     | '/verify-otp'
     | '/_dashboard/alerts'
+    | '/_dashboard/earthquakes'
     | '/_dashboard/evacuation'
     | '/_dashboard/live'
     | '/_dashboard/overview'
@@ -385,6 +397,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardEvacuationRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/earthquakes': {
+      id: '/_dashboard/earthquakes'
+      path: '/earthquakes'
+      fullPath: '/earthquakes'
+      preLoaderRoute: typeof DashboardEarthquakesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/alerts': {
       id: '/_dashboard/alerts'
       path: '/alerts'
@@ -404,6 +423,7 @@ declare module '@tanstack/react-router' {
 
 interface DashboardRouteChildren {
   DashboardAlertsRoute: typeof DashboardAlertsRoute
+  DashboardEarthquakesRoute: typeof DashboardEarthquakesRoute
   DashboardEvacuationRoute: typeof DashboardEvacuationRoute
   DashboardLiveRoute: typeof DashboardLiveRoute
   DashboardOverviewRoute: typeof DashboardOverviewRoute
@@ -416,6 +436,7 @@ interface DashboardRouteChildren {
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAlertsRoute: DashboardAlertsRoute,
+  DashboardEarthquakesRoute: DashboardEarthquakesRoute,
   DashboardEvacuationRoute: DashboardEvacuationRoute,
   DashboardLiveRoute: DashboardLiveRoute,
   DashboardOverviewRoute: DashboardOverviewRoute,
