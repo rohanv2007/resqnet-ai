@@ -6,7 +6,10 @@ export type ReportType =
   | "fire"
   | "damaged_bridge"
   | "shelter_overcrowding"
-  | "power_failure";
+  | "power_failure"
+  | "medical_help"
+  | "trapped_people"
+  | "other";
 
 export type ReportStatus = "new" | "verified" | "duplicate" | "resolved";
 
