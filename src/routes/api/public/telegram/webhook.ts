@@ -225,6 +225,74 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         const text: string = msg?.text ?? "";
         const lower = text.trim().toLowerCase();
         const location = msg?.location;
+        const photo = Array.isArray(msg?.photo) && msg.photo.length > 0
+          ? msg.photo[msg.photo.length - 1] as { file_id: string }
+          : null;
+        const caption: string = msg?.caption ?? "";
+
+        // ---- Photo report submission ----
+        if (photo) {
+          const sub = await getSub(chat.id);
+          if (!sub?.lat || !sub?.lng) {
+            await needsLocation(chat.id);
+            return Response.json({ ok: true });
+          }
+          if (!caption.trim()) {
+            await tg("sendMessage", {
+              chat_id: chat.id,
+              text: "📸 Got the photo. Please *resend it with a short caption* describing what's happening (e.g. \"flooded road on MG Street\").",
+              parse_mode: "Markdown",
+            });
+            return Response.json({ ok: true });
+          }
+
+          tg("sendChatAction", { chat_id: chat.id, action: "upload_photo" }).catch(() => {});
+
+          try {
+            const file = await downloadTelegramFile(photo.file_id);
+            let image_url: string | null = null;
+            if (file) {
+              const ext = file.mime.split("/")[1] ?? "jpg";
+              const path = `telegram/${chat.id}/${Date.now()}.${ext}`;
+              const up = await supabaseAdmin.storage
+                .from("citizen-reports")
+                .upload(path, file.bytes, { contentType: file.mime, upsert: false });
+              if (!up.error) {
+                const signed = await supabaseAdmin.storage
+                  .from("citizen-reports")
+                  .createSignedUrl(path, 60 * 60 * 24 * 365);
+                image_url = signed.data?.signedUrl ?? null;
+              }
+            }
+
+            const reporter = sub.first_name ? `${sub.first_name} (Telegram)` : "Telegram subscriber";
+            const { error } = await supabaseAdmin.from("citizen_reports").insert({
+              type: classifyReportType(caption),
+              description: caption.slice(0, 1000),
+              severity: classifySeverity(caption),
+              lat: sub.lat,
+              lng: sub.lng,
+              location_name: `Telegram report (${sub.lat.toFixed(3)}, ${sub.lng.toFixed(3)})`,
+              reported_by_name: reporter,
+              image_url,
+              status: "new",
+            });
+            if (error) throw error;
+
+            await tg("sendMessage", {
+              chat_id: chat.id,
+              text: `✅ *Report submitted!*\n\nYour photo and details are now in the command room feed. Authorities will review and respond.\n\n_Stay safe — send /risk to check live danger levels around you._`,
+              parse_mode: "Markdown",
+            });
+          } catch (e) {
+            await tg("sendMessage", {
+              chat_id: chat.id,
+              text: `⚠️ Couldn't submit your report. ${(e as Error).message}`,
+            });
+          }
+          return Response.json({ ok: true });
+        }
+
 
         // Location share from device
         if (location && typeof location.latitude === "number" && typeof location.longitude === "number") {
