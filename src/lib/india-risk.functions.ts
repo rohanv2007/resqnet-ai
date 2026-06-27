@@ -47,8 +47,27 @@ interface WeatherSlot {
   cape?: number; // J/kg (lightning proxy)
 }
 
+interface AirSlot {
+  city: IndiaCity;
+  aqi: number; pm25: number; pm10: number; ozone: number; no2: number;
+}
+
+async function fetchJsonRetry(url: string, attempts = 3): Promise<unknown | null> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const r = await fetch(url);
+      if (r.ok) return await r.json();
+      if (r.status !== 429 && r.status < 500) return null;
+    } catch {
+      // network blip
+    }
+    await new Promise((res) => setTimeout(res, 400 * (i + 1)));
+  }
+  return null;
+}
+
 async function fetchWeatherGrid(cities: IndiaCity[]): Promise<WeatherSlot[]> {
-  // Batch via Open-Meteo multi-coordinate request.
+  // Open-Meteo accepts comma-separated lat/lng and returns an array.
   const lat = cities.map((c) => c.lat).join(",");
   const lng = cities.map((c) => c.lng).join(",");
   const p = new URLSearchParams({
@@ -59,31 +78,52 @@ async function fetchWeatherGrid(cities: IndiaCity[]): Promise<WeatherSlot[]> {
     forecast_days: "2",
     timezone: "auto",
   });
-  try {
-    const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
-    if (!r.ok) return [];
-    const raw = await r.json();
-    const arr = Array.isArray(raw) ? raw : [raw];
-    return cities.map((city, i) => {
-      const j = arr[i] ?? {};
-      const cur = j.current ?? {};
-      const d = j.daily ?? {};
-      return {
-        city,
-        tmax: d.temperature_2m_max?.[0] ?? cur.temperature_2m ?? 30,
-        tmin: d.temperature_2m_min?.[0] ?? 20,
-        rain24: d.precipitation_sum?.[0] ?? 0,
-        rain48: (d.precipitation_sum?.[0] ?? 0) + (d.precipitation_sum?.[1] ?? 0),
-        wind: d.wind_speed_10m_max?.[0] ?? cur.wind_speed_10m ?? 0,
-        gust: cur.wind_gusts_10m ?? 0,
-        humidity: cur.relative_humidity_2m ?? 60,
-        cape: cur.cape ?? 0,
-      };
-    });
-  } catch {
-    return [];
-  }
+  const raw = await fetchJsonRetry(`https://api.open-meteo.com/v1/forecast?${p}`);
+  if (!raw) return [];
+  const arr = Array.isArray(raw) ? raw : [raw];
+  return cities.map((city, i) => {
+    const j = (arr[i] ?? {}) as Record<string, any>;
+    const cur = j.current ?? {};
+    const d = j.daily ?? {};
+    return {
+      city,
+      tmax: d.temperature_2m_max?.[0] ?? cur.temperature_2m ?? 30,
+      tmin: d.temperature_2m_min?.[0] ?? 20,
+      rain24: d.precipitation_sum?.[0] ?? 0,
+      rain48: (d.precipitation_sum?.[0] ?? 0) + (d.precipitation_sum?.[1] ?? 0),
+      wind: d.wind_speed_10m_max?.[0] ?? cur.wind_speed_10m ?? 0,
+      gust: cur.wind_gusts_10m ?? 0,
+      humidity: cur.relative_humidity_2m ?? 60,
+      cape: cur.cape ?? 0,
+    };
+  });
 }
+
+async function fetchAirGrid(cities: IndiaCity[]): Promise<AirSlot[]> {
+  const lat = cities.map((c) => c.lat).join(",");
+  const lng = cities.map((c) => c.lng).join(",");
+  const p = new URLSearchParams({
+    latitude: lat,
+    longitude: lng,
+    current: "us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide",
+    timezone: "auto",
+  });
+  const raw = await fetchJsonRetry(`https://air-quality-api.open-meteo.com/v1/air-quality?${p}`);
+  if (!raw) return [];
+  const arr = Array.isArray(raw) ? raw : [raw];
+  return cities.map((city, i) => {
+    const cur = ((arr[i] ?? {}) as Record<string, any>).current ?? {};
+    return {
+      city,
+      aqi: Number(cur.us_aqi ?? 0),
+      pm25: Number(cur.pm2_5 ?? 0),
+      pm10: Number(cur.pm10 ?? 0),
+      ozone: Number(cur.ozone ?? 0),
+      no2: Number(cur.nitrogen_dioxide ?? 0),
+    };
+  });
+}
+
 
 async function fetchUSGSQuakes() {
   // Last 30 days, mag ≥ 3.0, India region.
@@ -193,16 +233,14 @@ export const geocodeIndia = createServerFn({ method: "GET" })
 export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(async () => {
   const now = new Date().toISOString();
 
-  // Chunk weather grid (Open-Meteo allows multi-coord requests but URL length matters).
-  const chunks: IndiaCity[][] = [];
-  for (let i = 0; i < INDIA_CITIES.length; i += 40) chunks.push(INDIA_CITIES.slice(i, i + 40));
-
-  const [quakes, fires, ...weatherChunks] = await Promise.all([
+  const [quakes, fires, weather, air] = await Promise.all([
     fetchUSGSQuakes(),
     fetchFIRMS(),
-    ...chunks.map(fetchWeatherGrid),
+    fetchWeatherGrid(INDIA_CITIES),
+    fetchAirGrid(INDIA_CITIES),
   ]);
-  const weather = weatherChunks.flat();
+  const airByCity = new Map(air.map((a) => [a.city.name, a]));
+
 
   const points: HazardPoint[] = [];
 
@@ -317,6 +355,24 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
     const fireCount = fires.filter((f) => haversineKm([c.lat, c.lng], [f.lat, f.lng]) < 60).length;
     if (fireCount > 0) scores.wildfire = Math.min(100, fireCount * 10 + 25);
 
+    // AIR QUALITY: US AQI thresholds (EPA)
+    const a = airByCity.get(c.name);
+    if (a && a.aqi > 0) {
+      const aqScore = Math.min(100, Math.max(0, (a.aqi - 50) * 0.7 + 25));
+      if (a.aqi >= 50) {
+        scores.air_quality = aqScore;
+        points.push({
+          id: `aq-${c.name}`, hazard: "air_quality",
+          lat: c.lat, lng: c.lng, score: aqScore, severity: sev(aqScore),
+          title: `${c.name} air quality (US AQI ${a.aqi.toFixed(0)})`,
+          detail: `PM2.5 ${a.pm25.toFixed(0)} · PM10 ${a.pm10.toFixed(0)} · NO₂ ${a.no2.toFixed(0)} µg/m³`,
+          source: "Open-Meteo Air Quality (CAMS)", timestamp: now,
+          meta: { us_aqi: a.aqi, pm25: a.pm25, pm10: a.pm10, no2: a.no2, ozone: a.ozone },
+        });
+      }
+    }
+
+
     const overall = Math.max(0, ...Object.values(scores).map((n) => n ?? 0));
     cityRisks.push({
       name: c.name, state: c.state, lat: c.lat, lng: c.lng,
@@ -361,6 +417,7 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
       { id: "usgs", name: "USGS Earthquakes", status: quakes.length ? "live" : "degraded", events: quakes.length },
       { id: "firms", name: "NASA FIRMS (VIIRS)", status: fires.length ? "live" : (process.env.NASA_FIRMS_MAP_KEY ? "quiet" : "unconfigured"), events: fires.length },
       { id: "openmeteo", name: "Open-Meteo (IMD-aligned thresholds)", status: weather.length ? "live" : "degraded", events: weather.length },
+      { id: "openmeteo-aq", name: "Open-Meteo Air Quality (CAMS)", status: air.length ? "live" : "degraded", events: air.length },
       { id: "imd", name: "IMD bulletins", status: "advisory-only", events: 0 },
       { id: "cwc", name: "CWC river levels", status: "advisory-only", events: 0 },
       { id: "ncs", name: "NCS India seismology", status: "cross-checked via USGS", events: 0 },
