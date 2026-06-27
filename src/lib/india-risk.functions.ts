@@ -120,7 +120,7 @@ async function loadBundleSnapshot(): Promise<IndiaRiskBundle | null> {
 
     const raw = data?.raw;
     if (data && isRiskBundle(raw)) {
-      const bundle = raw as IndiaRiskBundle;
+      const bundle = raw as unknown as IndiaRiskBundle;
       return {
         ...bundle,
         fetched_at: bundle.fetched_at ?? data.created_at,
@@ -347,6 +347,10 @@ export const geocodeIndia = createServerFn({ method: "GET" })
 export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(async () => {
   const now = new Date().toISOString();
 
+  if (INDIA_RISK_CACHE && Date.now() - INDIA_RISK_CACHE.at < INDIA_RISK_CACHE_TTL_MS) {
+    return INDIA_RISK_CACHE.payload;
+  }
+
   const [quakes, fires, weather, air] = await Promise.all([
     fetchUSGSQuakes(),
     fetchFIRMS(),
@@ -354,6 +358,42 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
     fetchAirGrid(INDIA_CITIES),
   ]);
   const airByCity = new Map(air.map((a) => [a.city.name, a]));
+
+  // Published serverless/worker IPs can occasionally be throttled by Open-Meteo.
+  // If that happens, keep the national dashboard populated from the latest
+  // real-data snapshot, while still refreshing earthquake + FIRMS feeds live.
+  if (weather.length < Math.min(10, Math.floor(INDIA_CITIES.length * 0.1))) {
+    const snapshot = await loadBundleSnapshot();
+    if (snapshot?.cityRisks.length) {
+      const cachedDerived = snapshot.points
+        .filter((p) => WEATHER_HAZARDS.has(p.hazard) || p.hazard === "air_quality")
+        .map((p) => ({ ...p, source: p.source.includes("cached") ? p.source : `${p.source} · cached snapshot` }));
+      const points = [...quakes, ...fires, ...cachedDerived];
+      const counts = points.reduce((acc, p) => {
+        acc[p.hazard] = (acc[p.hazard] ?? 0) + 1;
+        return acc;
+      }, {} as Record<HazardKind, number>);
+      const payload: IndiaRiskBundle = {
+        ...snapshot,
+        fetched_at: now,
+        points,
+        counts,
+        ticker: [...points].sort((a, b) => b.score - a.score).slice(0, 40),
+        sources: [
+          { id: "usgs", name: "USGS Earthquakes", status: quakes.length ? "live" : "degraded", events: quakes.length },
+          { id: "firms", name: "NASA FIRMS (VIIRS)", status: fires.length ? "live" : (process.env.NASA_FIRMS_MAP_KEY ? "quiet" : "unconfigured"), events: fires.length },
+          { id: "openmeteo", name: "Open-Meteo (IMD-aligned thresholds)", status: "cached", events: snapshot.cityRisks.length },
+          { id: "openmeteo-aq", name: "Open-Meteo Air Quality (CAMS)", status: "cached", events: snapshot.points.filter((p) => p.hazard === "air_quality").length },
+          { id: "imd", name: "IMD bulletins", status: "advisory-only", events: 0 },
+          { id: "cwc", name: "CWC river levels", status: "advisory-only", events: 0 },
+          { id: "ncs", name: "NCS India seismology", status: "cross-checked via USGS", events: 0 },
+        ],
+        stale: true,
+      };
+      INDIA_RISK_CACHE = { at: Date.now(), payload };
+      return payload;
+    }
+  }
 
 
   const points: HazardPoint[] = [];
@@ -520,7 +560,7 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
     return acc;
   }, {} as Record<HazardKind, number>);
 
-  return {
+  const payload: IndiaRiskBundle = {
     fetched_at: now,
     points,
     cityRisks,
@@ -537,4 +577,8 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
       { id: "ncs", name: "NCS India seismology", status: "cross-checked via USGS", events: 0 },
     ],
   };
+
+  if (cityRisks.length) void saveBundleSnapshot(payload);
+  INDIA_RISK_CACHE = { at: Date.now(), payload };
+  return payload;
 });
