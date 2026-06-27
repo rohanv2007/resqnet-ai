@@ -355,6 +355,24 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
     const fireCount = fires.filter((f) => haversineKm([c.lat, c.lng], [f.lat, f.lng]) < 60).length;
     if (fireCount > 0) scores.wildfire = Math.min(100, fireCount * 10 + 25);
 
+    // AIR QUALITY: US AQI thresholds (EPA)
+    const a = airByCity.get(c.name);
+    if (a && a.aqi > 0) {
+      const aqScore = Math.min(100, Math.max(0, (a.aqi - 50) * 0.7 + 25));
+      if (a.aqi >= 50) {
+        scores.air_quality = aqScore;
+        points.push({
+          id: `aq-${c.name}`, hazard: "air_quality",
+          lat: c.lat, lng: c.lng, score: aqScore, severity: sev(aqScore),
+          title: `${c.name} air quality (US AQI ${a.aqi.toFixed(0)})`,
+          detail: `PM2.5 ${a.pm25.toFixed(0)} · PM10 ${a.pm10.toFixed(0)} · NO₂ ${a.no2.toFixed(0)} µg/m³`,
+          source: "Open-Meteo Air Quality (CAMS)", timestamp: now,
+          meta: { us_aqi: a.aqi, pm25: a.pm25, pm10: a.pm10, no2: a.no2, ozone: a.ozone },
+        });
+      }
+    }
+
+
     const overall = Math.max(0, ...Object.values(scores).map((n) => n ?? 0));
     cityRisks.push({
       name: c.name, state: c.state, lat: c.lat, lng: c.lng,
