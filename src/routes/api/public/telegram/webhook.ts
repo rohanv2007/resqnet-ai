@@ -342,6 +342,11 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           return Response.json({ ok: true });
         }
 
+        if (lower.startsWith("/report")) {
+          await tg("sendMessage", { chat_id: chat.id, text: REPORT_HELP, parse_mode: "Markdown" });
+          return Response.json({ ok: true });
+        }
+
         if (lower.startsWith("/location")) {
           await tg("sendMessage", {
             chat_id: chat.id,
