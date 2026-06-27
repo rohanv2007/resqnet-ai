@@ -84,6 +84,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:description", content: "Offline-first disaster intelligence dashboard for India." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "ResQNet - Hyperlocal Disaster Intelligence" },
+      { name: "twitter:description", content: "Offline-first disaster intelligence dashboard for India." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e2e90bda-c0ee-4fd0-8f32-b1c0b891e495/id-preview-8dc135e3--ff0a5948-3da4-47f3-8cd1-b68ebf6699ef.lovable.app-1782538512031.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e2e90bda-c0ee-4fd0-8f32-b1c0b891e495/id-preview-8dc135e3--ff0a5948-3da4-47f3-8cd1-b68ebf6699ef.lovable.app-1782538512031.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
