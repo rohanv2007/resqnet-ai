@@ -36,38 +36,73 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
     const now = new Date().toISOString();
     const activeSources: string[] = [];
 
-    // ---------- 1. WEATHER (Open-Meteo) ----------
+    // ---------- 1. WEATHER (Open-Meteo) with retries + Supabase fallback ----------
     let rainfall_mm_24h = 0, wind_speed_kmh = 0, temperature_c = 25, humidity = 60;
     let daily: DailySlot[] = [];
-    try {
-      const p = new URLSearchParams({
-        latitude: String(data.lat), longitude: String(data.lng),
-        current: "temperature_2m,relative_humidity_2m,wind_speed_10m",
-        hourly: "precipitation",
-        daily: "precipitation_sum,temperature_2m_max,temperature_2m_min,wind_speed_10m_max",
-        past_days: "4", forecast_days: "3", timezone: "auto",
-      });
-      const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
-      if (r.ok) {
-        const j = await r.json() as {
-          current?: Record<string, number>;
-          hourly?: { precipitation: number[] };
-          daily?: { time: string[]; precipitation_sum: number[]; temperature_2m_max: number[]; temperature_2m_min: number[]; wind_speed_10m_max: number[] };
-        };
-        rainfall_mm_24h = (j.hourly?.precipitation ?? []).slice(-24).reduce((a, b) => a + b, 0);
-        wind_speed_kmh = j.current?.wind_speed_10m ?? 0;
-        temperature_c = j.current?.temperature_2m ?? 25;
-        humidity = j.current?.relative_humidity_2m ?? 60;
-        daily = (j.daily?.time ?? []).map((t, i) => ({
-          date: t,
-          rainfall_mm: j.daily?.precipitation_sum?.[i] ?? 0,
-          temp_max: j.daily?.temperature_2m_max?.[i] ?? null,
-          temp_min: j.daily?.temperature_2m_min?.[i] ?? null,
-          wind_max_kmh: j.daily?.wind_speed_10m_max?.[i] ?? null,
-        }));
-        activeSources.push("Open-Meteo");
+    let weatherOk = false;
+    const p = new URLSearchParams({
+      latitude: String(data.lat), longitude: String(data.lng),
+      current: "temperature_2m,relative_humidity_2m,wind_speed_10m",
+      hourly: "precipitation",
+      daily: "precipitation_sum,temperature_2m_max,temperature_2m_min,wind_speed_10m_max",
+      past_days: "4", forecast_days: "3", timezone: "auto",
+    });
+    const wxHosts = [
+      "https://api.open-meteo.com/v1/forecast",
+      "https://customer-api.open-meteo.com/v1/forecast",
+    ];
+    outer: for (const host of wxHosts) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const r = await fetch(`${host}?${p}`, { headers: { "User-Agent": "ResQNet/1.0" } });
+          if (r.ok) {
+            const j = await r.json() as {
+              current?: Record<string, number>;
+              hourly?: { precipitation: number[] };
+              daily?: { time: string[]; precipitation_sum: number[]; temperature_2m_max: number[]; temperature_2m_min: number[]; wind_speed_10m_max: number[] };
+            };
+            rainfall_mm_24h = (j.hourly?.precipitation ?? []).slice(-24).reduce((a, b) => a + b, 0);
+            wind_speed_kmh = j.current?.wind_speed_10m ?? 0;
+            temperature_c = j.current?.temperature_2m ?? 25;
+            humidity = j.current?.relative_humidity_2m ?? 60;
+            daily = (j.daily?.time ?? []).map((t, i) => ({
+              date: t,
+              rainfall_mm: j.daily?.precipitation_sum?.[i] ?? 0,
+              temp_max: j.daily?.temperature_2m_max?.[i] ?? null,
+              temp_min: j.daily?.temperature_2m_min?.[i] ?? null,
+              wind_max_kmh: j.daily?.wind_speed_10m_max?.[i] ?? null,
+            }));
+            activeSources.push("Open-Meteo");
+            weatherOk = true;
+            break outer;
+          }
+          if (r.status !== 429 && r.status < 500) break;
+        } catch { /* retry */ }
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
       }
-    } catch { /* offline */ }
+    }
+    if (!weatherOk) {
+      try {
+        const { supabaseAdmin: sa } = await import("@/integrations/supabase/client.server");
+        const { data: snap } = await sa
+          .from("weather_snapshots")
+          .select("raw, rainfall_mm, wind_speed_kmh, temperature, humidity, created_at")
+          .gte("lat", data.lat - 0.5).lte("lat", data.lat + 0.5)
+          .gte("lng", data.lng - 0.5).lte("lng", data.lng + 0.5)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (snap) {
+          rainfall_mm_24h = snap.rainfall_mm ?? rainfall_mm_24h;
+          wind_speed_kmh = snap.wind_speed_kmh ?? wind_speed_kmh;
+          temperature_c = snap.temperature ?? temperature_c;
+          humidity = snap.humidity ?? humidity;
+          const raw = (snap.raw as { daily?: DailySlot[] } | null) ?? null;
+          if (raw?.daily) daily = raw.daily;
+          activeSources.push("Open-Meteo");
+        }
+      } catch { /* ignore */ }
+    }
 
     // ---------- 2. FIRMS hotspots within ~80 km ----------
     const hotspots: { lat: number; lng: number; frp: number; confidence: number }[] = [];
