@@ -96,6 +96,14 @@ export default function QuakeMap({
 
     L.control.layers({ Dark: dark, Light: light }, {}, { position: "topright" }).addTo(map);
 
+    // re-render markers on zoom so sizes track scale
+    const onZoom = () => {
+      renderQuakesRef.current?.();
+      renderStrongestRef.current?.();
+    };
+    map.on("zoomend", onZoom);
+
+
     const t = window.setTimeout(() => map.invalidateSize(), 0);
     return () => {
       window.clearTimeout(t);
