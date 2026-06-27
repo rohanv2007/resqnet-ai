@@ -199,3 +199,8 @@
   transform-box: fill-box;
   animation: simPulse 1.4s ease-out infinite;
 }
+
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
