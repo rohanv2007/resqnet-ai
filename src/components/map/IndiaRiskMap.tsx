@@ -12,6 +12,21 @@ const HAZARD_GLYPH: Record<HazardKind, string> = {
   landslide: "⛰", drought: "☀", wildfire: "🔥", lightning: "⚡", air_quality: "☁",
 };
 
+function zoomScale(zoom = 5) {
+  return Math.min(1, Math.max(0.32, (zoom + 1) / 7));
+}
+
+function markerRadius(score: number, zoom: number) {
+  const base = 5 + Math.min(8, score / 14);
+  return base * zoomScale(zoom);
+}
+
+function haloRadius(score: number, zoom: number) {
+  const base = 8 + (score / 100) * 28;
+  const scale = Math.min(1, Math.max(0.22, (zoom + 1) / 8));
+  return base * scale;
+}
+
 export interface IndiaRiskMapProps {
   center: [number, number];
   zoom: number;
@@ -32,6 +47,7 @@ export default function IndiaRiskMap({
   const layerRef = useRef<L.LayerGroup | null>(null);
   const heatRef = useRef<L.LayerGroup | null>(null);
   const focusRef = useRef<L.Marker | null>(null);
+  const renderPointsRef = useRef<(() => void) | null>(null);
 
   // Init map once
   useEffect(() => {
@@ -43,9 +59,14 @@ export default function IndiaRiskMap({
     layerRef.current = L.layerGroup().addTo(map);
     heatRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
+
+    const onZoom = () => renderPointsRef.current?.();
+    map.on("zoomend", onZoom);
+
     const t = window.setTimeout(() => map.invalidateSize(), 60);
     return () => {
       window.clearTimeout(t);
+      map.off("zoomend", onZoom);
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
@@ -61,45 +82,52 @@ export default function IndiaRiskMap({
 
   // Render points
   useEffect(() => {
-    const layer = layerRef.current;
-    const heat = heatRef.current;
-    if (!layer || !heat) return;
-    layer.clearLayers();
-    heat.clearLayers();
+    const render = () => {
+      const layer = layerRef.current;
+      const heat = heatRef.current;
+      const map = mapRef.current;
+      if (!layer || !heat || !map) return;
 
-    const visible = points.filter((p) => enabledLayers.has(p.hazard));
+      const currentZoom = map.getZoom();
+      const scale = zoomScale(currentZoom);
+      layer.clearLayers();
+      heat.clearLayers();
 
-    if (showHeatmap) {
-      for (const p of visible) {
-        const radius = 8 + (p.score / 100) * 28;
-        L.circleMarker([p.lat, p.lng], {
-          radius,
-          color: COLOR[p.severity],
-          weight: 0,
-          fillColor: COLOR[p.severity],
-          fillOpacity: 0.18,
-        }).addTo(heat);
+      const visible = points.filter((p) => enabledLayers.has(p.hazard));
+
+      if (showHeatmap) {
+        for (const p of visible) {
+          L.circleMarker([p.lat, p.lng], {
+            radius: haloRadius(p.score, currentZoom),
+            color: COLOR[p.severity],
+            weight: 0,
+            fillColor: COLOR[p.severity],
+            fillOpacity: 0.08 + scale * 0.1,
+          }).addTo(heat);
+        }
       }
-    }
 
-    for (const p of visible) {
-      const m = L.circleMarker([p.lat, p.lng], {
-        radius: 5 + Math.min(8, p.score / 14),
-        color: COLOR[p.severity],
-        fillColor: COLOR[p.severity],
-        fillOpacity: 0.9,
-        weight: 1.5,
-      }).addTo(layer);
-      m.bindPopup(
-        `<div style="font-family:system-ui;font-size:12px">
-          <div style="font-weight:600">${HAZARD_GLYPH[p.hazard]} ${p.title}</div>
-          <div style="color:#666;margin-top:2px">${p.detail}</div>
-          <div style="margin-top:4px"><b>Score:</b> ${p.score.toFixed(0)} · <b>Level:</b> ${p.severity}</div>
-          <div style="color:#888;font-size:11px">${p.source} · ${new Date(p.timestamp).toLocaleString()}</div>
-        </div>`,
-      );
-      if (onSelect) m.on("click", () => onSelect(p));
-    }
+      for (const p of visible) {
+        const m = L.circleMarker([p.lat, p.lng], {
+          radius: markerRadius(p.score, currentZoom),
+          color: COLOR[p.severity],
+          fillColor: COLOR[p.severity],
+          fillOpacity: 0.9,
+          weight: Math.max(1, 1.5 * scale),
+        }).addTo(layer);
+        m.bindPopup(
+          `<div style="font-family:system-ui;font-size:12px">
+            <div style="font-weight:600">${HAZARD_GLYPH[p.hazard]} ${p.title}</div>
+            <div style="color:#666;margin-top:2px">${p.detail}</div>
+            <div style="margin-top:4px"><b>Score:</b> ${p.score.toFixed(0)} · <b>Level:</b> ${p.severity}</div>
+            <div style="color:#888;font-size:11px">${p.source} · ${new Date(p.timestamp).toLocaleString()}</div>
+          </div>`,
+        );
+        if (onSelect) m.on("click", () => onSelect(p));
+      }
+    };
+    renderPointsRef.current = render;
+    render();
   }, [points, enabledLayers, showHeatmap, onSelect]);
 
   // Focus marker
