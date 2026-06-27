@@ -235,13 +235,21 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         // ---- Photo report submission ----
         if (photo) {
           console.log("[tg-webhook] photo received", { chat: chat.id, hasCaption: Boolean(caption.trim()) });
+          if (!caption.trim()) {
+            await tg("sendMessage", {
+              chat_id: chat.id,
+              text: "📸 I got your photo, but I need your message too.\n\nPlease resend the photo with a caption like:\n\"flooded road near my street\"\n\"tree fell and blocked the road\"\n\"people trapped near this location\"",
+            }).catch(() => {});
+            return Response.json({ ok: true, needs_caption: true });
+          }
+
           const sub = await getSub(chat.id);
           if (!sub?.lat || !sub?.lng) {
             console.log("[tg-webhook] no location for sub", chat.id);
             await needsLocation(chat.id);
             return Response.json({ ok: true });
           }
-          const effectiveCaption = caption.trim() || "Field report from Telegram";
+          const effectiveCaption = caption.trim();
 
           // Ack immediately so Telegram doesn't time out (10s budget).
           await tg("sendMessage", {

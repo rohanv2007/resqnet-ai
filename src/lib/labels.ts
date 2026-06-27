@@ -41,6 +41,9 @@ export const reportLabels: Record<ReportType, string> = {
   damaged_bridge: "Damaged Bridge",
   shelter_overcrowding: "Shelter Overcrowding",
   power_failure: "Power Failure",
+  medical_help: "Medical Help",
+  trapped_people: "Trapped People",
+  other: "Field Report",
 };
 
 export const reportIcons = {
@@ -50,6 +53,9 @@ export const reportIcons = {
   damaged_bridge: AlertTriangle,
   shelter_overcrowding: Tent,
   power_failure: Power,
+  medical_help: MapPinned,
+  trapped_people: ShieldAlert,
+  other: AlertTriangle,
 } satisfies Record<ReportType, typeof Waves>;
 
 export const resourceLabels: Record<ResourceType, string> = {
