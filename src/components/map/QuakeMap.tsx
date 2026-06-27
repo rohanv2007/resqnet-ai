@@ -44,6 +44,9 @@ export default function QuakeMap({
   const layerRef = useRef<L.LayerGroup | null>(null);
   const heatRef = useRef<L.LayerGroup | null>(null);
   const strongestRef = useRef<L.LayerGroup | null>(null);
+  const renderQuakesRef = useRef<(() => void) | null>(null);
+  const renderStrongestRef = useRef<(() => void) | null>(null);
+
 
   useEffect(() => {
     const container = containerRef.current as LeafletElement | null;
