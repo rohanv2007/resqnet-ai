@@ -146,9 +146,8 @@ export default function IndiaRiskMap({
     if (focusMarker) {
       const icon = L.divIcon({
         className: "",
-        html,
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
+        html: `<div class="risk-focus-marker" style="width:18px;height:18px;border-radius:999px;background:#2563EB;border:3px solid white;box-shadow:0 0 0 4px rgba(37,99,235,.35);"></div>`,
+        iconSize: [30, 30], iconAnchor: [15, 15],
       });
       focusRef.current = L.marker([focusMarker.lat, focusMarker.lng], { icon })
         .bindPopup(focusMarker.label ?? "Selected location")
