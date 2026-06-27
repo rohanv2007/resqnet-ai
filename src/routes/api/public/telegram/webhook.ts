@@ -35,10 +35,21 @@ const HELP_TEXT = `🤖 *ResQNet Bot Commands*
 /risk — disaster risk summary for your area
 /alerts — active alerts near you
 /shelters — nearest evacuation shelters
+/report — how to send a field report with a photo
 /location — update your saved location
 /stop — unsubscribe
 
+📸 *Submit a report*: just send a photo with a short caption (e.g. _"flooded road near my street"_) and it goes straight to the command room.
+
 Or just *ask me in plain English* — "is it safe in my area?", "any fires nearby?", "should I evacuate?" — I'll answer using live NASA / USGS / Open-Meteo / IMD data.`;
+
+const REPORT_HELP = `📸 *How to send a field report*
+
+1. Take or pick a photo of what's happening
+2. Add a *caption* describing it (e.g. "water rising on MG Road")
+3. Send it to me
+
+I'll attach your saved location and forward it to NDRF / authorities instantly.`;
 
 type Sub = { lat: number | null; lng: number | null; first_name: string | null };
 
