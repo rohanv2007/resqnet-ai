@@ -12,6 +12,7 @@ import {
   Route,
   Settings,
   Shield,
+  Waves,
   
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
