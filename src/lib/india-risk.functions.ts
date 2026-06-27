@@ -417,6 +417,7 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
       { id: "usgs", name: "USGS Earthquakes", status: quakes.length ? "live" : "degraded", events: quakes.length },
       { id: "firms", name: "NASA FIRMS (VIIRS)", status: fires.length ? "live" : (process.env.NASA_FIRMS_MAP_KEY ? "quiet" : "unconfigured"), events: fires.length },
       { id: "openmeteo", name: "Open-Meteo (IMD-aligned thresholds)", status: weather.length ? "live" : "degraded", events: weather.length },
+      { id: "openmeteo-aq", name: "Open-Meteo Air Quality (CAMS)", status: air.length ? "live" : "degraded", events: air.length },
       { id: "imd", name: "IMD bulletins", status: "advisory-only", events: 0 },
       { id: "cwc", name: "CWC river levels", status: "advisory-only", events: 0 },
       { id: "ncs", name: "NCS India seismology", status: "cross-checked via USGS", events: 0 },
