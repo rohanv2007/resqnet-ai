@@ -33,7 +33,7 @@ export function DataSourceIndicator({
           <div>
             <p className="text-sm font-semibold">Active data sources</p>
             <p className="text-xs text-muted-foreground">
-              Live mock feed for the current operational area.
+              Live backend + external data feeds for the current operational area.
             </p>
           </div>
           <div className="grid gap-2">
