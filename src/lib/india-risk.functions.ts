@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { INDIA_BBOX, INDIA_CITIES, type IndiaCity } from "@/lib/india-cities";
+import { INDIA_BBOX, INDIA_CENTER, INDIA_CITIES, type IndiaCity } from "@/lib/india-cities";
 import { haversineKm } from "@/lib/resq/risk-core";
 
 export type HazardKind =
@@ -118,10 +118,11 @@ async function loadBundleSnapshot(): Promise<IndiaRiskBundle | null> {
       .limit(1)
       .maybeSingle();
 
-    if (isRiskBundle(data?.raw)) {
+    const raw = data?.raw;
+    if (isRiskBundle(raw)) {
       return {
-        ...data.raw,
-        fetched_at: data.raw.fetched_at ?? data.created_at,
+        ...raw,
+        fetched_at: raw.fetched_at ?? data.created_at,
         stale: true,
       };
     }
