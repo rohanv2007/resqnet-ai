@@ -234,63 +234,72 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
 
         // ---- Photo report submission ----
         if (photo) {
+          console.log("[tg-webhook] photo received", { chat: chat.id, hasCaption: Boolean(caption.trim()) });
           const sub = await getSub(chat.id);
           if (!sub?.lat || !sub?.lng) {
+            console.log("[tg-webhook] no location for sub", chat.id);
             await needsLocation(chat.id);
             return Response.json({ ok: true });
           }
-          if (!caption.trim()) {
-            await tg("sendMessage", {
-              chat_id: chat.id,
-              text: "📸 Got the photo. Please *resend it with a short caption* describing what's happening (e.g. \"flooded road on MG Street\").",
-              parse_mode: "Markdown",
-            });
-            return Response.json({ ok: true });
-          }
+          const effectiveCaption = caption.trim() || "Field report from Telegram";
 
-          tg("sendChatAction", { chat_id: chat.id, action: "upload_photo" }).catch(() => {});
+          // Ack immediately so Telegram doesn't time out (10s budget).
+          await tg("sendMessage", {
+            chat_id: chat.id,
+            text: "📤 Got it — uploading your report to the command room…",
+          }).catch(() => {});
 
+          // Process inline but resiliently; insert row even if image upload fails.
+          let image_url: string | null = null;
           try {
             const file = await downloadTelegramFile(photo.file_id);
-            let image_url: string | null = null;
             if (file) {
               const ext = file.mime.split("/")[1] ?? "jpg";
               const path = `telegram/${chat.id}/${Date.now()}.${ext}`;
               const up = await supabaseAdmin.storage
                 .from("citizen-reports")
                 .upload(path, file.bytes, { contentType: file.mime, upsert: false });
-              if (!up.error) {
+              if (up.error) {
+                console.error("[tg-webhook] storage upload failed", up.error);
+              } else {
                 const signed = await supabaseAdmin.storage
                   .from("citizen-reports")
                   .createSignedUrl(path, 60 * 60 * 24 * 365);
                 image_url = signed.data?.signedUrl ?? null;
               }
+            } else {
+              console.warn("[tg-webhook] downloadTelegramFile returned null");
             }
-
-            const reporter = sub.first_name ? `${sub.first_name} (Telegram)` : "Telegram subscriber";
-            const { error } = await supabaseAdmin.from("citizen_reports").insert({
-              type: classifyReportType(caption),
-              description: caption.slice(0, 1000),
-              severity: classifySeverity(caption),
-              lat: sub.lat,
-              lng: sub.lng,
-              location_name: `Telegram report (${sub.lat.toFixed(3)}, ${sub.lng.toFixed(3)})`,
-              reported_by_name: reporter,
-              image_url,
-              status: "new",
-            });
-            if (error) throw error;
-
-            await tg("sendMessage", {
-              chat_id: chat.id,
-              text: `✅ *Report submitted!*\n\nYour photo and details are now in the command room feed. Authorities will review and respond.\n\n_Stay safe — send /risk to check live danger levels around you._`,
-              parse_mode: "Markdown",
-            });
           } catch (e) {
+            console.error("[tg-webhook] image pipeline error", e);
+          }
+
+          const reporter = sub.first_name ? `${sub.first_name} (Telegram)` : "Telegram subscriber";
+          const { data: inserted, error } = await supabaseAdmin.from("citizen_reports").insert({
+            type: classifyReportType(effectiveCaption),
+            description: effectiveCaption.slice(0, 1000),
+            severity: classifySeverity(effectiveCaption),
+            lat: sub.lat,
+            lng: sub.lng,
+            location_name: `Telegram report (${sub.lat.toFixed(3)}, ${sub.lng.toFixed(3)})`,
+            reported_by_name: reporter,
+            image_url,
+            status: "new",
+          }).select("id").single();
+
+          if (error) {
+            console.error("[tg-webhook] insert failed", error);
             await tg("sendMessage", {
               chat_id: chat.id,
-              text: `⚠️ Couldn't submit your report. ${(e as Error).message}`,
-            });
+              text: `⚠️ Couldn't submit your report. ${error.message}`,
+            }).catch(() => {});
+          } else {
+            console.log("[tg-webhook] report inserted", inserted?.id);
+            await tg("sendMessage", {
+              chat_id: chat.id,
+              text: `✅ *Report submitted!*\n\nYour ${image_url ? "photo and " : ""}details are now in the command room feed.\n\n_Send /risk to check live danger levels around you._`,
+              parse_mode: "Markdown",
+            }).catch(() => {});
           }
           return Response.json({ ok: true });
         }
