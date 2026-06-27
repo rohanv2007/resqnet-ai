@@ -582,7 +582,7 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
     ],
   };
 
-  if (cityRisks.length) void saveBundleSnapshot(payload);
+  if (cityRisks.length) await saveBundleSnapshot(payload);
   INDIA_RISK_CACHE = { at: Date.now(), payload };
   return payload;
 });
