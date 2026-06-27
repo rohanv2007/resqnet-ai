@@ -14,9 +14,13 @@ function magColor(m: number) {
   return "#16a34a";
 }
 
-function magRadius(m: number) {
-  return Math.max(4, Math.pow(Math.max(0, m), 1.7));
+function magRadius(m: number, zoom = 4) {
+  const base = Math.max(3, Math.pow(Math.max(0, m), 1.55));
+  // scale down at low zooms so markers don't cover continents
+  const z = Math.min(1, Math.max(0.35, (zoom + 1) / 7));
+  return base * z;
 }
+
 
 function fmtTime(t: number) {
   return new Date(t).toUTCString();
