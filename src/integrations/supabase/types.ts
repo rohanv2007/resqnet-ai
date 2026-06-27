@@ -580,28 +580,40 @@ export type Database = {
       telegram_subscribers: {
         Row: {
           active: boolean
+          alert_radius_km: number
           chat_id: number
           created_at: string
           first_name: string | null
           language: string | null
+          lat: number | null
+          lng: number | null
+          location_updated_at: string | null
           updated_at: string
           username: string | null
         }
         Insert: {
           active?: boolean
+          alert_radius_km?: number
           chat_id: number
           created_at?: string
           first_name?: string | null
           language?: string | null
+          lat?: number | null
+          lng?: number | null
+          location_updated_at?: string | null
           updated_at?: string
           username?: string | null
         }
         Update: {
           active?: boolean
+          alert_radius_km?: number
           chat_id?: number
           created_at?: string
           first_name?: string | null
           language?: string | null
+          lat?: number | null
+          lng?: number | null
+          location_updated_at?: string | null
           updated_at?: string
           username?: string | null
         }
