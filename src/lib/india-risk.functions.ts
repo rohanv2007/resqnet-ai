@@ -358,6 +358,7 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
     fetchAirGrid(INDIA_CITIES),
   ]);
   const airByCity = new Map(air.map((a) => [a.city.name, a]));
+  const weatherByCity = new Map(weather.map((w) => [w.city.name, w]));
 
   // Published serverless/worker IPs can occasionally be throttled by Open-Meteo.
   // If that happens, keep the national dashboard populated from the latest
@@ -403,25 +404,27 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
 
   // ---- Derived per-city hazards from weather
   const cityRisks: CityRisk[] = [];
-  for (const w of weather) {
-    const c = w.city;
+  for (const c of INDIA_CITIES) {
+    const w = weatherByCity.get(c.name);
     const scores: Partial<Record<HazardKind, number>> = {};
 
-    // FLOOD: rainfall + riverine flag
-    const floodScore = Math.min(100,
-      w.rain24 * 1.1 + w.rain48 * 0.4 + (c.riverine ? 12 : 0) + (c.coastal ? 6 : 0)
-    );
-    if (floodScore >= 25) {
-      scores.flood = floodScore;
-      points.push({
-        id: `flood-${c.name}`, hazard: "flood",
-        lat: c.lat, lng: c.lng, score: floodScore, severity: sev(floodScore),
-        title: `${c.name} flood risk`,
-        detail: `${w.rain24.toFixed(0)} mm/24h, ${w.rain48.toFixed(0)} mm/48h${c.riverine ? " · riverine zone" : ""}`,
-        source: "Open-Meteo + terrain", timestamp: now,
-        meta: { rain24_mm: w.rain24, rain48_mm: w.rain48 },
-      });
-    }
+    if (w) {
+
+      // FLOOD: rainfall + riverine flag
+      const floodScore = Math.min(100,
+        w.rain24 * 1.1 + w.rain48 * 0.4 + (c.riverine ? 12 : 0) + (c.coastal ? 6 : 0)
+      );
+      if (floodScore >= 25) {
+        scores.flood = floodScore;
+        points.push({
+          id: `flood-${c.name}`, hazard: "flood",
+          lat: c.lat, lng: c.lng, score: floodScore, severity: sev(floodScore),
+          title: `${c.name} flood risk`,
+          detail: `${w.rain24.toFixed(0)} mm/24h, ${w.rain48.toFixed(0)} mm/48h${c.riverine ? " · riverine zone" : ""}`,
+          source: "Open-Meteo + terrain", timestamp: now,
+          meta: { rain24_mm: w.rain24, rain48_mm: w.rain48 },
+        });
+      }
 
     // CYCLONE: only meaningful for coastal cities; wind + gust + pressure proxy
     if (c.coastal) {
@@ -484,18 +487,19 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
       });
     }
 
-    // LIGHTNING: CAPE-based (J/kg)
-    if ((w.cape ?? 0) > 1000) {
-      const ltScore = Math.min(100, ((w.cape ?? 0) - 1000) / 30 + 35);
-      scores.lightning = ltScore;
-      points.push({
-        id: `lt-${c.name}`, hazard: "lightning",
-        lat: c.lat, lng: c.lng, score: ltScore, severity: sev(ltScore),
-        title: `${c.name} thunderstorm potential`,
-        detail: `CAPE ${(w.cape ?? 0).toFixed(0)} J/kg · gusts ${w.gust.toFixed(0)} km/h`,
-        source: "Open-Meteo", timestamp: now,
-        meta: { cape: w.cape ?? 0 },
-      });
+      // LIGHTNING: CAPE-based (J/kg)
+      if ((w.cape ?? 0) > 1000) {
+        const ltScore = Math.min(100, ((w.cape ?? 0) - 1000) / 30 + 35);
+        scores.lightning = ltScore;
+        points.push({
+          id: `lt-${c.name}`, hazard: "lightning",
+          lat: c.lat, lng: c.lng, score: ltScore, severity: sev(ltScore),
+          title: `${c.name} thunderstorm potential`,
+          detail: `CAPE ${(w.cape ?? 0).toFixed(0)} J/kg · gusts ${w.gust.toFixed(0)} km/h`,
+          source: "Open-Meteo", timestamp: now,
+          meta: { cape: w.cape ?? 0 },
+        });
+      }
     }
 
     // Earthquake city score: nearest quake within 300 km
