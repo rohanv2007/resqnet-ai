@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
+  Activity,
   Bell,
   ChartNoAxesCombined,
   ClipboardList,
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/overview", label: "Overview", icon: Gauge },
   { href: "/live", label: "Live Backend", icon: Waves },
   { href: "/risk-map", label: "Risk Map", icon: Map },
+  { href: "/earthquakes", label: "Earthquakes", icon: Activity },
   { href: "/simulation", label: "Simulation", icon: ChartNoAxesCombined },
   { href: "/evacuation", label: "Evacuation", icon: Route },
   { href: "/reports", label: "Reports", icon: ClipboardList },
