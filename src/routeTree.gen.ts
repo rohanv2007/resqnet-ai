@@ -24,11 +24,11 @@ import { Route as DashboardRiskMapRouteImport } from './routes/_dashboard.risk-m
 import { Route as DashboardResourcesRouteImport } from './routes/_dashboard.resources'
 import { Route as DashboardReportsRouteImport } from './routes/_dashboard.reports'
 import { Route as DashboardOverviewRouteImport } from './routes/_dashboard.overview'
-import { Route as DashboardLiveRouteImport } from './routes/_dashboard.live'
 import { Route as DashboardEvacuationRouteImport } from './routes/_dashboard.evacuation'
 import { Route as DashboardEarthquakesRouteImport } from './routes/_dashboard.earthquakes'
 import { Route as DashboardAlertsRouteImport } from './routes/_dashboard.alerts'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
+import { Route as ApiPublicHooksAutoAlertsRouteImport } from './routes/api/public/hooks/auto-alerts'
 
 const VerifyOtpRoute = VerifyOtpRouteImport.update({
   id: '/verify-otp',
@@ -104,11 +104,6 @@ const DashboardOverviewRoute = DashboardOverviewRouteImport.update({
   path: '/overview',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardLiveRoute = DashboardLiveRouteImport.update({
-  id: '/live',
-  path: '/live',
-  getParentRoute: () => DashboardRoute,
-} as any)
 const DashboardEvacuationRoute = DashboardEvacuationRouteImport.update({
   id: '/evacuation',
   path: '/evacuation',
@@ -130,6 +125,12 @@ const ApiPublicTelegramWebhookRoute =
     path: '/api/public/telegram/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksAutoAlertsRoute =
+  ApiPublicHooksAutoAlertsRouteImport.update({
+    id: '/api/public/hooks/auto-alerts',
+    path: '/api/public/hooks/auto-alerts',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -143,13 +144,13 @@ export interface FileRoutesByFullPath {
   '/alerts': typeof DashboardAlertsRoute
   '/earthquakes': typeof DashboardEarthquakesRoute
   '/evacuation': typeof DashboardEvacuationRoute
-  '/live': typeof DashboardLiveRoute
   '/overview': typeof DashboardOverviewRoute
   '/reports': typeof DashboardReportsRoute
   '/resources': typeof DashboardResourcesRoute
   '/risk-map': typeof DashboardRiskMapRoute
   '/settings': typeof DashboardSettingsRoute
   '/simulation': typeof DashboardSimulationRoute
+  '/api/public/hooks/auto-alerts': typeof ApiPublicHooksAutoAlertsRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -164,13 +165,13 @@ export interface FileRoutesByTo {
   '/alerts': typeof DashboardAlertsRoute
   '/earthquakes': typeof DashboardEarthquakesRoute
   '/evacuation': typeof DashboardEvacuationRoute
-  '/live': typeof DashboardLiveRoute
   '/overview': typeof DashboardOverviewRoute
   '/reports': typeof DashboardReportsRoute
   '/resources': typeof DashboardResourcesRoute
   '/risk-map': typeof DashboardRiskMapRoute
   '/settings': typeof DashboardSettingsRoute
   '/simulation': typeof DashboardSimulationRoute
+  '/api/public/hooks/auto-alerts': typeof ApiPublicHooksAutoAlertsRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRoutesById {
@@ -187,13 +188,13 @@ export interface FileRoutesById {
   '/_dashboard/alerts': typeof DashboardAlertsRoute
   '/_dashboard/earthquakes': typeof DashboardEarthquakesRoute
   '/_dashboard/evacuation': typeof DashboardEvacuationRoute
-  '/_dashboard/live': typeof DashboardLiveRoute
   '/_dashboard/overview': typeof DashboardOverviewRoute
   '/_dashboard/reports': typeof DashboardReportsRoute
   '/_dashboard/resources': typeof DashboardResourcesRoute
   '/_dashboard/risk-map': typeof DashboardRiskMapRoute
   '/_dashboard/settings': typeof DashboardSettingsRoute
   '/_dashboard/simulation': typeof DashboardSimulationRoute
+  '/api/public/hooks/auto-alerts': typeof ApiPublicHooksAutoAlertsRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRouteTypes {
@@ -210,13 +211,13 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/earthquakes'
     | '/evacuation'
-    | '/live'
     | '/overview'
     | '/reports'
     | '/resources'
     | '/risk-map'
     | '/settings'
     | '/simulation'
+    | '/api/public/hooks/auto-alerts'
     | '/api/public/telegram/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -231,13 +232,13 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/earthquakes'
     | '/evacuation'
-    | '/live'
     | '/overview'
     | '/reports'
     | '/resources'
     | '/risk-map'
     | '/settings'
     | '/simulation'
+    | '/api/public/hooks/auto-alerts'
     | '/api/public/telegram/webhook'
   id:
     | '__root__'
@@ -253,13 +254,13 @@ export interface FileRouteTypes {
     | '/_dashboard/alerts'
     | '/_dashboard/earthquakes'
     | '/_dashboard/evacuation'
-    | '/_dashboard/live'
     | '/_dashboard/overview'
     | '/_dashboard/reports'
     | '/_dashboard/resources'
     | '/_dashboard/risk-map'
     | '/_dashboard/settings'
     | '/_dashboard/simulation'
+    | '/api/public/hooks/auto-alerts'
     | '/api/public/telegram/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -273,6 +274,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   RoleSelectionRoute: typeof RoleSelectionRoute
   VerifyOtpRoute: typeof VerifyOtpRoute
+  ApiPublicHooksAutoAlertsRoute: typeof ApiPublicHooksAutoAlertsRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
 }
 
@@ -383,13 +385,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardOverviewRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/live': {
-      id: '/_dashboard/live'
-      path: '/live'
-      fullPath: '/live'
-      preLoaderRoute: typeof DashboardLiveRouteImport
-      parentRoute: typeof DashboardRoute
-    }
     '/_dashboard/evacuation': {
       id: '/_dashboard/evacuation'
       path: '/evacuation'
@@ -418,6 +413,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/auto-alerts': {
+      id: '/api/public/hooks/auto-alerts'
+      path: '/api/public/hooks/auto-alerts'
+      fullPath: '/api/public/hooks/auto-alerts'
+      preLoaderRoute: typeof ApiPublicHooksAutoAlertsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -425,7 +427,6 @@ interface DashboardRouteChildren {
   DashboardAlertsRoute: typeof DashboardAlertsRoute
   DashboardEarthquakesRoute: typeof DashboardEarthquakesRoute
   DashboardEvacuationRoute: typeof DashboardEvacuationRoute
-  DashboardLiveRoute: typeof DashboardLiveRoute
   DashboardOverviewRoute: typeof DashboardOverviewRoute
   DashboardReportsRoute: typeof DashboardReportsRoute
   DashboardResourcesRoute: typeof DashboardResourcesRoute
@@ -438,7 +439,6 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAlertsRoute: DashboardAlertsRoute,
   DashboardEarthquakesRoute: DashboardEarthquakesRoute,
   DashboardEvacuationRoute: DashboardEvacuationRoute,
-  DashboardLiveRoute: DashboardLiveRoute,
   DashboardOverviewRoute: DashboardOverviewRoute,
   DashboardReportsRoute: DashboardReportsRoute,
   DashboardResourcesRoute: DashboardResourcesRoute,
@@ -461,6 +461,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   RoleSelectionRoute: RoleSelectionRoute,
   VerifyOtpRoute: VerifyOtpRoute,
+  ApiPublicHooksAutoAlertsRoute: ApiPublicHooksAutoAlertsRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
 }
 export const routeTree = rootRouteImport
