@@ -47,8 +47,27 @@ interface WeatherSlot {
   cape?: number; // J/kg (lightning proxy)
 }
 
+interface AirSlot {
+  city: IndiaCity;
+  aqi: number; pm25: number; pm10: number; ozone: number; no2: number;
+}
+
+async function fetchJsonRetry(url: string, attempts = 3): Promise<unknown | null> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const r = await fetch(url);
+      if (r.ok) return await r.json();
+      if (r.status !== 429 && r.status < 500) return null;
+    } catch {
+      // network blip
+    }
+    await new Promise((res) => setTimeout(res, 400 * (i + 1)));
+  }
+  return null;
+}
+
 async function fetchWeatherGrid(cities: IndiaCity[]): Promise<WeatherSlot[]> {
-  // Batch via Open-Meteo multi-coordinate request.
+  // Open-Meteo accepts comma-separated lat/lng and returns an array.
   const lat = cities.map((c) => c.lat).join(",");
   const lng = cities.map((c) => c.lng).join(",");
   const p = new URLSearchParams({
@@ -59,31 +78,52 @@ async function fetchWeatherGrid(cities: IndiaCity[]): Promise<WeatherSlot[]> {
     forecast_days: "2",
     timezone: "auto",
   });
-  try {
-    const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
-    if (!r.ok) return [];
-    const raw = await r.json();
-    const arr = Array.isArray(raw) ? raw : [raw];
-    return cities.map((city, i) => {
-      const j = arr[i] ?? {};
-      const cur = j.current ?? {};
-      const d = j.daily ?? {};
-      return {
-        city,
-        tmax: d.temperature_2m_max?.[0] ?? cur.temperature_2m ?? 30,
-        tmin: d.temperature_2m_min?.[0] ?? 20,
-        rain24: d.precipitation_sum?.[0] ?? 0,
-        rain48: (d.precipitation_sum?.[0] ?? 0) + (d.precipitation_sum?.[1] ?? 0),
-        wind: d.wind_speed_10m_max?.[0] ?? cur.wind_speed_10m ?? 0,
-        gust: cur.wind_gusts_10m ?? 0,
-        humidity: cur.relative_humidity_2m ?? 60,
-        cape: cur.cape ?? 0,
-      };
-    });
-  } catch {
-    return [];
-  }
+  const raw = await fetchJsonRetry(`https://api.open-meteo.com/v1/forecast?${p}`);
+  if (!raw) return [];
+  const arr = Array.isArray(raw) ? raw : [raw];
+  return cities.map((city, i) => {
+    const j = (arr[i] ?? {}) as Record<string, any>;
+    const cur = j.current ?? {};
+    const d = j.daily ?? {};
+    return {
+      city,
+      tmax: d.temperature_2m_max?.[0] ?? cur.temperature_2m ?? 30,
+      tmin: d.temperature_2m_min?.[0] ?? 20,
+      rain24: d.precipitation_sum?.[0] ?? 0,
+      rain48: (d.precipitation_sum?.[0] ?? 0) + (d.precipitation_sum?.[1] ?? 0),
+      wind: d.wind_speed_10m_max?.[0] ?? cur.wind_speed_10m ?? 0,
+      gust: cur.wind_gusts_10m ?? 0,
+      humidity: cur.relative_humidity_2m ?? 60,
+      cape: cur.cape ?? 0,
+    };
+  });
 }
+
+async function fetchAirGrid(cities: IndiaCity[]): Promise<AirSlot[]> {
+  const lat = cities.map((c) => c.lat).join(",");
+  const lng = cities.map((c) => c.lng).join(",");
+  const p = new URLSearchParams({
+    latitude: lat,
+    longitude: lng,
+    current: "us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide",
+    timezone: "auto",
+  });
+  const raw = await fetchJsonRetry(`https://air-quality-api.open-meteo.com/v1/air-quality?${p}`);
+  if (!raw) return [];
+  const arr = Array.isArray(raw) ? raw : [raw];
+  return cities.map((city, i) => {
+    const cur = ((arr[i] ?? {}) as Record<string, any>).current ?? {};
+    return {
+      city,
+      aqi: Number(cur.us_aqi ?? 0),
+      pm25: Number(cur.pm2_5 ?? 0),
+      pm10: Number(cur.pm10 ?? 0),
+      ozone: Number(cur.ozone ?? 0),
+      no2: Number(cur.nitrogen_dioxide ?? 0),
+    };
+  });
+}
+
 
 async function fetchUSGSQuakes() {
   // Last 30 days, mag ≥ 3.0, India region.
