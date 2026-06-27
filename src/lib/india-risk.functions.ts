@@ -119,10 +119,11 @@ async function loadBundleSnapshot(): Promise<IndiaRiskBundle | null> {
       .maybeSingle();
 
     const raw = data?.raw;
-    if (isRiskBundle(raw)) {
+    if (data && isRiskBundle(raw)) {
+      const bundle = raw as IndiaRiskBundle;
       return {
-        ...raw,
-        fetched_at: raw.fetched_at ?? data.created_at,
+        ...bundle,
+        fetched_at: bundle.fetched_at ?? data.created_at,
         stale: true,
       };
     }
