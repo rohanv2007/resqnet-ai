@@ -120,82 +120,84 @@ export default function QuakeMap({
   }, []);
 
   useEffect(() => {
-    const layer = layerRef.current;
-    const heat = heatRef.current;
-    if (!layer || !heat) return;
-    layer.clearLayers();
-    heat.clearLayers();
+    const render = () => {
+      const layer = layerRef.current;
+      const heat = heatRef.current;
+      const map = mapRef.current;
+      if (!layer || !heat || !map) return;
+      const zoom = map.getZoom();
+      layer.clearLayers();
+      heat.clearLayers();
 
-    quakes.forEach((q) => {
-      const color = magColor(q.mag);
-      // soft heat halo
-      L.circleMarker([q.lat, q.lng], {
-        radius: magRadius(q.mag) * 2.4,
-        color,
-        fillColor: color,
-        fillOpacity: 0.08,
-        weight: 0,
-      }).addTo(heat);
+      quakes.forEach((q) => {
+        const color = magColor(q.mag);
+        const r = magRadius(q.mag, zoom);
+        L.circleMarker([q.lat, q.lng], {
+          radius: r * 2.2,
+          color, fillColor: color, fillOpacity: 0.08, weight: 0,
+        }).addTo(heat);
 
-      const marker = L.circleMarker([q.lat, q.lng], {
-        radius: magRadius(q.mag),
-        color: "#0b1220",
-        weight: 1,
-        fillColor: color,
-        fillOpacity: 0.9,
+        const marker = L.circleMarker([q.lat, q.lng], {
+          radius: r,
+          color: "#0b1220", weight: 1,
+          fillColor: color, fillOpacity: 0.9,
+        });
+        const popupHtml = `
+          <div style="font-family:ui-sans-serif,system-ui;min-width:240px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span style="background:${color};color:white;padding:2px 8px;border-radius:999px;font-weight:700;font-size:12px">M ${q.mag.toFixed(1)}</span>
+              ${q.tsunami ? '<span style="background:#0369a1;color:white;padding:2px 6px;border-radius:6px;font-size:10px">TSUNAMI</span>' : ""}
+              ${q.alert ? `<span style="background:${q.alert};color:white;padding:2px 6px;border-radius:6px;font-size:10px;text-transform:uppercase">${q.alert}</span>` : ""}
+            </div>
+            <div style="font-weight:600;font-size:13px">${q.place}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px">${fmtTime(q.time)}</div>
+            <hr style="margin:6px 0;border:none;border-top:1px solid #e2e8f0"/>
+            <div style="font-size:11px;line-height:1.5">
+              <div><b>Depth:</b> ${q.depthKm.toFixed(1)} km</div>
+              <div><b>Coords:</b> ${q.lat.toFixed(3)}, ${q.lng.toFixed(3)}</div>
+              <div><b>Country:</b> ${q.country ?? "—"}</div>
+              <div><b>Sources:</b> ${q.sources.join(", ")}</div>
+              <div><b>Confidence:</b> ${q.confidence}%</div>
+              <div><b>Event ID:</b> ${q.id}</div>
+            </div>
+          </div>`;
+        marker.bindPopup(popupHtml);
+        if (onSelect) marker.on("click", () => onSelect(q));
+        marker.addTo(layer);
       });
-      const popupHtml = `
-        <div style="font-family:ui-sans-serif,system-ui;min-width:240px">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-            <span style="background:${color};color:white;padding:2px 8px;border-radius:999px;font-weight:700;font-size:12px">M ${q.mag.toFixed(1)}</span>
-            ${q.tsunami ? '<span style="background:#0369a1;color:white;padding:2px 6px;border-radius:6px;font-size:10px">TSUNAMI</span>' : ""}
-            ${q.alert ? `<span style="background:${q.alert};color:white;padding:2px 6px;border-radius:6px;font-size:10px;text-transform:uppercase">${q.alert}</span>` : ""}
-          </div>
-          <div style="font-weight:600;font-size:13px">${q.place}</div>
-          <div style="font-size:11px;color:#64748b;margin-top:2px">${fmtTime(q.time)}</div>
-          <hr style="margin:6px 0;border:none;border-top:1px solid #e2e8f0"/>
-          <div style="font-size:11px;line-height:1.5">
-            <div><b>Depth:</b> ${q.depthKm.toFixed(1)} km</div>
-            <div><b>Coords:</b> ${q.lat.toFixed(3)}, ${q.lng.toFixed(3)}</div>
-            <div><b>Country:</b> ${q.country ?? "—"}</div>
-            <div><b>Sources:</b> ${q.sources.join(", ")}</div>
-            <div><b>Confidence:</b> ${q.confidence}%</div>
-            <div><b>Event ID:</b> ${q.id}</div>
-          </div>
-        </div>`;
-      marker.bindPopup(popupHtml);
-      if (onSelect) marker.on("click", () => onSelect(q));
-      marker.addTo(layer);
-    });
+    };
+    renderQuakesRef.current = render;
+    render();
   }, [quakes, onSelect]);
 
   useEffect(() => {
-    const layer = strongestRef.current;
-    if (!layer) return;
-    layer.clearLayers();
-    if (!strongest) return;
-    const color = magColor(strongest.mag);
-    // pulsing outer ring
-    L.circleMarker([strongest.lat, strongest.lng], {
-      radius: magRadius(strongest.mag) * 3,
-      color,
-      weight: 2,
-      fillColor: color,
-      fillOpacity: 0.15,
-      className: "sim-pulse",
-    }).addTo(layer);
-    L.circleMarker([strongest.lat, strongest.lng], {
-      radius: magRadius(strongest.mag) * 1.4,
-      color: "#fff",
-      weight: 2,
-      fillColor: color,
-      fillOpacity: 1,
-    })
-      .bindPopup(
-        `<b>Strongest event</b><br/>M${strongest.mag.toFixed(1)} — ${strongest.place}`,
-      )
-      .addTo(layer);
+    const render = () => {
+      const layer = strongestRef.current;
+      const map = mapRef.current;
+      if (!layer || !map) return;
+      layer.clearLayers();
+      if (!strongest) return;
+      const zoom = map.getZoom();
+      const color = magColor(strongest.mag);
+      const r = magRadius(strongest.mag, zoom);
+      L.circleMarker([strongest.lat, strongest.lng], {
+        radius: r * 2.6,
+        color, weight: 2,
+        fillColor: color, fillOpacity: 0.15,
+        className: "sim-pulse",
+      }).addTo(layer);
+      L.circleMarker([strongest.lat, strongest.lng], {
+        radius: r * 1.3,
+        color: "#fff", weight: 2,
+        fillColor: color, fillOpacity: 1,
+      })
+        .bindPopup(`<b>Strongest event</b><br/>M${strongest.mag.toFixed(1)} — ${strongest.place}`)
+        .addTo(layer);
+    };
+    renderStrongestRef.current = render;
+    render();
   }, [strongest]);
+
 
   return (
     <div
