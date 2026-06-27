@@ -238,7 +238,7 @@ function createMarker(
     marker.on("click", () => onSelect(p));
   }
 
-  return { marker, el: marker.getElement(), point: p };
+  return { marker, el: marker.getElement() ?? null, point: p };
 }
 
 function updateMarker(
