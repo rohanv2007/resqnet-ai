@@ -585,6 +585,9 @@ export type Database = {
           created_at: string
           first_name: string | null
           language: string | null
+          last_auto_alert_at: string | null
+          last_auto_alert_key: string | null
+          last_auto_alert_level: string | null
           lat: number | null
           lng: number | null
           location_updated_at: string | null
@@ -598,6 +601,9 @@ export type Database = {
           created_at?: string
           first_name?: string | null
           language?: string | null
+          last_auto_alert_at?: string | null
+          last_auto_alert_key?: string | null
+          last_auto_alert_level?: string | null
           lat?: number | null
           lng?: number | null
           location_updated_at?: string | null
@@ -611,6 +617,9 @@ export type Database = {
           created_at?: string
           first_name?: string | null
           language?: string | null
+          last_auto_alert_at?: string | null
+          last_auto_alert_key?: string | null
+          last_auto_alert_level?: string | null
           lat?: number | null
           lng?: number | null
           location_updated_at?: string | null
