@@ -33,6 +33,40 @@ export interface CityRisk {
   level: Severity;
 }
 
+interface StateRisk {
+  state: string;
+  population: number;
+  max: number;
+  cities: number;
+  hazards: Record<HazardKind, number>;
+  level: Severity;
+}
+
+interface SourceStatus {
+  id: string;
+  name: string;
+  status: string;
+  events: number;
+}
+
+interface IndiaRiskBundle {
+  fetched_at: string;
+  points: HazardPoint[];
+  cityRisks: CityRisk[];
+  states: StateRisk[];
+  ticker: HazardPoint[];
+  counts: Record<HazardKind, number>;
+  sources: SourceStatus[];
+  stale?: boolean;
+}
+
+const WEATHER_HAZARDS = new Set<HazardKind>([
+  "flood", "cyclone", "heatwave", "landslide", "drought", "lightning",
+]);
+
+let INDIA_RISK_CACHE: { at: number; payload: IndiaRiskBundle } | null = null;
+const INDIA_RISK_CACHE_TTL_MS = 8 * 60 * 1000;
+
 function sev(score: number): Severity {
   if (score >= 80) return "danger";
   if (score >= 60) return "warning";
@@ -52,10 +86,12 @@ interface AirSlot {
   aqi: number; pm25: number; pm10: number; ozone: number; no2: number;
 }
 
-async function fetchJsonRetry(url: string, attempts = 3): Promise<unknown | null> {
+async function fetchJsonRetry(url: string, attempts = 4): Promise<unknown | null> {
   for (let i = 0; i < attempts; i++) {
     try {
-      const r = await fetch(url);
+      const r = await fetch(url, {
+        headers: { "User-Agent": "ResQNet/1.0 (national-risk-map)" },
+      });
       if (r.ok) return await r.json();
       if (r.status !== 429 && r.status < 500) return null;
     } catch {
@@ -64,6 +100,54 @@ async function fetchJsonRetry(url: string, attempts = 3): Promise<unknown | null
     await new Promise((res) => setTimeout(res, 400 * (i + 1)));
   }
   return null;
+}
+
+function isRiskBundle(value: unknown): value is IndiaRiskBundle {
+  const v = value as Partial<IndiaRiskBundle> | null;
+  return !!v && Array.isArray(v.points) && Array.isArray(v.cityRisks) && Array.isArray(v.states);
+}
+
+async function loadBundleSnapshot(): Promise<IndiaRiskBundle | null> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("weather_snapshots")
+      .select("raw, created_at")
+      .eq("source", "India Risk Bundle")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (isRiskBundle(data?.raw)) {
+      return {
+        ...data.raw,
+        fetched_at: data.raw.fetched_at ?? data.created_at,
+        stale: true,
+      };
+    }
+  } catch {
+    // cache miss or backend unavailable
+  }
+  return null;
+}
+
+async function saveBundleSnapshot(payload: IndiaRiskBundle) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("weather_snapshots").insert({
+      lat: INDIA_CENTER[0],
+      lng: INDIA_CENTER[1],
+      source: "India Risk Bundle",
+      temperature: null,
+      humidity: null,
+      wind_speed_kmh: null,
+      pressure: null,
+      rainfall_mm: null,
+      raw: payload as never,
+    });
+  } catch {
+    // best-effort cache only
+  }
 }
 
 function chunk<T>(arr: T[], size: number): T[][] {
