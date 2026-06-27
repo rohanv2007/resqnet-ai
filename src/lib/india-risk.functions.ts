@@ -233,16 +233,14 @@ export const geocodeIndia = createServerFn({ method: "GET" })
 export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(async () => {
   const now = new Date().toISOString();
 
-  // Chunk weather grid (Open-Meteo allows multi-coord requests but URL length matters).
-  const chunks: IndiaCity[][] = [];
-  for (let i = 0; i < INDIA_CITIES.length; i += 40) chunks.push(INDIA_CITIES.slice(i, i + 40));
-
-  const [quakes, fires, ...weatherChunks] = await Promise.all([
+  const [quakes, fires, weather, air] = await Promise.all([
     fetchUSGSQuakes(),
     fetchFIRMS(),
-    ...chunks.map(fetchWeatherGrid),
+    fetchWeatherGrid(INDIA_CITIES),
+    fetchAirGrid(INDIA_CITIES),
   ]);
-  const weather = weatherChunks.flat();
+  const airByCity = new Map(air.map((a) => [a.city.name, a]));
+
 
   const points: HazardPoint[] = [];
 
