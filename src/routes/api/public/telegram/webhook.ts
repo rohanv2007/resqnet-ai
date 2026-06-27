@@ -35,10 +35,21 @@ const HELP_TEXT = `🤖 *ResQNet Bot Commands*
 /risk — disaster risk summary for your area
 /alerts — active alerts near you
 /shelters — nearest evacuation shelters
+/report — how to send a field report with a photo
 /location — update your saved location
 /stop — unsubscribe
 
+📸 *Submit a report*: just send a photo with a short caption (e.g. _"flooded road near my street"_) and it goes straight to the command room.
+
 Or just *ask me in plain English* — "is it safe in my area?", "any fires nearby?", "should I evacuate?" — I'll answer using live NASA / USGS / Open-Meteo / IMD data.`;
+
+const REPORT_HELP = `📸 *How to send a field report*
+
+1. Take or pick a photo of what's happening
+2. Add a *caption* describing it (e.g. "water rising on MG Road")
+3. Send it to me
+
+I'll attach your saved location and forward it to NDRF / authorities instantly.`;
 
 type Sub = { lat: number | null; lng: number | null; first_name: string | null };
 
@@ -50,6 +61,46 @@ async function getSub(chatId: number): Promise<Sub | null> {
     .eq("chat_id", chatId)
     .maybeSingle();
   return (data as Sub | null) ?? null;
+}
+
+type DbReportType = "rising_water"|"blocked_road"|"fire"|"damaged_bridge"|"shelter_overcrowding"|"power_failure"|"medical_help"|"trapped_people"|"other";
+
+function classifyReportType(text: string): DbReportType {
+  const t = text.toLowerCase();
+  if (/(flood|water|rain|overflow|inundat)/.test(t)) return "rising_water";
+  if (/(fire|smoke|burn|blaze)/.test(t)) return "fire";
+  if (/(road|block|tree|debris|landslide)/.test(t)) return "blocked_road";
+  if (/(bridge|collapse|crack)/.test(t)) return "damaged_bridge";
+  if (/(shelter|camp|crowd)/.test(t)) return "shelter_overcrowding";
+  if (/(power|electric|outage|blackout)/.test(t)) return "power_failure";
+  if (/(medical|injur|hurt|hospital|ambulance)/.test(t)) return "medical_help";
+  if (/(trap|stuck|stranded|rescue)/.test(t)) return "trapped_people";
+  return "other";
+}
+
+function classifySeverity(text: string): "watch" | "warning" | "danger" {
+  const t = text.toLowerCase();
+  if (/(urgent|emergency|danger|critical|severe|trapped|dying|life)/.test(t)) return "danger";
+  if (/(warning|serious|bad|heavy|major)/.test(t)) return "warning";
+  return "watch";
+}
+
+async function downloadTelegramFile(fileId: string): Promise<{ bytes: Buffer; mime: string } | null> {
+  const info = await tg("getFile", { file_id: fileId });
+  const infoJson = await info.json().catch(() => null) as { result?: { file_path?: string } } | null;
+  const path = infoJson?.result?.file_path;
+  if (!path) return null;
+  const key = process.env.TELEGRAM_API_KEY!;
+  const res = await fetch(`https://connector-gateway.lovable.dev/telegram/file/${path}`, {
+    headers: {
+      Authorization: `Bearer ${process.env.LOVABLE_API_KEY}`,
+      "X-Connection-Api-Key": key,
+    },
+  });
+  if (!res.ok) return null;
+  const ab = await res.arrayBuffer();
+  const mime = path.endsWith(".png") ? "image/png" : path.endsWith(".webp") ? "image/webp" : "image/jpeg";
+  return { bytes: Buffer.from(ab), mime };
 }
 
 async function needsLocation(chatId: number) {
@@ -176,6 +227,74 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         const text: string = msg?.text ?? "";
         const lower = text.trim().toLowerCase();
         const location = msg?.location;
+        const photo = Array.isArray(msg?.photo) && msg.photo.length > 0
+          ? msg.photo[msg.photo.length - 1] as { file_id: string }
+          : null;
+        const caption: string = msg?.caption ?? "";
+
+        // ---- Photo report submission ----
+        if (photo) {
+          const sub = await getSub(chat.id);
+          if (!sub?.lat || !sub?.lng) {
+            await needsLocation(chat.id);
+            return Response.json({ ok: true });
+          }
+          if (!caption.trim()) {
+            await tg("sendMessage", {
+              chat_id: chat.id,
+              text: "📸 Got the photo. Please *resend it with a short caption* describing what's happening (e.g. \"flooded road on MG Street\").",
+              parse_mode: "Markdown",
+            });
+            return Response.json({ ok: true });
+          }
+
+          tg("sendChatAction", { chat_id: chat.id, action: "upload_photo" }).catch(() => {});
+
+          try {
+            const file = await downloadTelegramFile(photo.file_id);
+            let image_url: string | null = null;
+            if (file) {
+              const ext = file.mime.split("/")[1] ?? "jpg";
+              const path = `telegram/${chat.id}/${Date.now()}.${ext}`;
+              const up = await supabaseAdmin.storage
+                .from("citizen-reports")
+                .upload(path, file.bytes, { contentType: file.mime, upsert: false });
+              if (!up.error) {
+                const signed = await supabaseAdmin.storage
+                  .from("citizen-reports")
+                  .createSignedUrl(path, 60 * 60 * 24 * 365);
+                image_url = signed.data?.signedUrl ?? null;
+              }
+            }
+
+            const reporter = sub.first_name ? `${sub.first_name} (Telegram)` : "Telegram subscriber";
+            const { error } = await supabaseAdmin.from("citizen_reports").insert({
+              type: classifyReportType(caption),
+              description: caption.slice(0, 1000),
+              severity: classifySeverity(caption),
+              lat: sub.lat,
+              lng: sub.lng,
+              location_name: `Telegram report (${sub.lat.toFixed(3)}, ${sub.lng.toFixed(3)})`,
+              reported_by_name: reporter,
+              image_url,
+              status: "new",
+            });
+            if (error) throw error;
+
+            await tg("sendMessage", {
+              chat_id: chat.id,
+              text: `✅ *Report submitted!*\n\nYour photo and details are now in the command room feed. Authorities will review and respond.\n\n_Stay safe — send /risk to check live danger levels around you._`,
+              parse_mode: "Markdown",
+            });
+          } catch (e) {
+            await tg("sendMessage", {
+              chat_id: chat.id,
+              text: `⚠️ Couldn't submit your report. ${(e as Error).message}`,
+            });
+          }
+          return Response.json({ ok: true });
+        }
+
 
         // Location share from device
         if (location && typeof location.latitude === "number" && typeof location.longitude === "number") {
@@ -220,6 +339,11 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
 
         if (lower.startsWith("/help")) {
           await tg("sendMessage", { chat_id: chat.id, text: HELP_TEXT, parse_mode: "Markdown" });
+          return Response.json({ ok: true });
+        }
+
+        if (lower.startsWith("/report")) {
+          await tg("sendMessage", { chat_id: chat.id, text: REPORT_HELP, parse_mode: "Markdown" });
           return Response.json({ ok: true });
         }
 
