@@ -66,8 +66,13 @@ async function fetchJsonRetry(url: string, attempts = 3): Promise<unknown | null
   return null;
 }
 
-async function fetchWeatherGrid(cities: IndiaCity[]): Promise<WeatherSlot[]> {
-  // Open-Meteo accepts comma-separated lat/lng and returns an array.
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+async function fetchWeatherChunk(cities: IndiaCity[]): Promise<WeatherSlot[]> {
   const lat = cities.map((c) => c.lat).join(",");
   const lng = cities.map((c) => c.lng).join(",");
   const p = new URLSearchParams({
@@ -99,7 +104,18 @@ async function fetchWeatherGrid(cities: IndiaCity[]): Promise<WeatherSlot[]> {
   });
 }
 
-async function fetchAirGrid(cities: IndiaCity[]): Promise<AirSlot[]> {
+async function fetchWeatherGrid(cities: IndiaCity[]): Promise<WeatherSlot[]> {
+  const chunks = chunk(cities, 25);
+  const out: WeatherSlot[] = [];
+  for (const c of chunks) {
+    const slot = await fetchWeatherChunk(c);
+    out.push(...slot);
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  return out;
+}
+
+async function fetchAirChunk(cities: IndiaCity[]): Promise<AirSlot[]> {
   const lat = cities.map((c) => c.lat).join(",");
   const lng = cities.map((c) => c.lng).join(",");
   const p = new URLSearchParams({
@@ -123,6 +139,18 @@ async function fetchAirGrid(cities: IndiaCity[]): Promise<AirSlot[]> {
     };
   });
 }
+
+async function fetchAirGrid(cities: IndiaCity[]): Promise<AirSlot[]> {
+  const chunks = chunk(cities, 25);
+  const out: AirSlot[] = [];
+  for (const c of chunks) {
+    const slot = await fetchAirChunk(c);
+    out.push(...slot);
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  return out;
+}
+
 
 
 async function fetchUSGSQuakes() {
