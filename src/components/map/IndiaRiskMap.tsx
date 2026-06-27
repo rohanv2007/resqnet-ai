@@ -227,8 +227,8 @@ function createMarker(
   const icon = L.divIcon({
     className: "",
     html,
-    iconSize: [0, 0],
-    iconAnchor: [0, 0],
+    iconSize: [100, 100],
+    iconAnchor: [50, 50],
   });
 
   const marker = L.marker([p.lat, p.lng], { icon }).addTo(layer);
