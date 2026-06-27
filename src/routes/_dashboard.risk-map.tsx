@@ -116,6 +116,11 @@ function Page() {
                 Updated {formatDistanceToNowStrict(new Date(dataUpdatedAt), { addSuffix: true })}
               </span>
             ) : null}
+            {data?.stale ? (
+              <Badge variant="outline" className="border-amber-500/40 text-amber-300">
+                cached live snapshot
+              </Badge>
+            ) : null}
             <Button size="sm" variant="outline" disabled={isFetching} onClick={() => refetch()}>
               {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
             </Button>
@@ -236,6 +241,7 @@ function Page() {
                     s.status === "live" ? "border-emerald-500/40 text-emerald-300"
                     : s.status === "advisory-only" || s.status === "cross-checked via USGS" ? "border-slate-500/40 text-slate-400"
                     : s.status === "unconfigured" ? "border-red-500/40 text-red-300"
+                    : s.status === "cached" ? "border-amber-500/40 text-amber-300"
                     : "border-amber-500/40 text-amber-300"
                   }>
                     {s.status}

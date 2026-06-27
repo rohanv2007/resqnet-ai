@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { INDIA_BBOX, INDIA_CITIES, type IndiaCity } from "@/lib/india-cities";
+import { INDIA_BBOX, INDIA_CENTER, INDIA_CITIES, type IndiaCity } from "@/lib/india-cities";
 import { haversineKm } from "@/lib/resq/risk-core";
 
 export type HazardKind =
@@ -33,6 +33,40 @@ export interface CityRisk {
   level: Severity;
 }
 
+export interface StateRisk {
+  state: string;
+  population: number;
+  max: number;
+  cities: number;
+  hazards: Record<HazardKind, number>;
+  level: Severity;
+}
+
+export interface SourceStatus {
+  id: string;
+  name: string;
+  status: string;
+  events: number;
+}
+
+export interface IndiaRiskBundle {
+  fetched_at: string;
+  points: HazardPoint[];
+  cityRisks: CityRisk[];
+  states: StateRisk[];
+  ticker: HazardPoint[];
+  counts: Record<HazardKind, number>;
+  sources: SourceStatus[];
+  stale?: boolean;
+}
+
+const WEATHER_HAZARDS = new Set<HazardKind>([
+  "flood", "cyclone", "heatwave", "landslide", "drought", "lightning",
+]);
+
+let INDIA_RISK_CACHE: { at: number; payload: IndiaRiskBundle } | null = null;
+const INDIA_RISK_CACHE_TTL_MS = 8 * 60 * 1000;
+
 function sev(score: number): Severity {
   if (score >= 80) return "danger";
   if (score >= 60) return "warning";
@@ -52,10 +86,12 @@ interface AirSlot {
   aqi: number; pm25: number; pm10: number; ozone: number; no2: number;
 }
 
-async function fetchJsonRetry(url: string, attempts = 3): Promise<unknown | null> {
+async function fetchJsonRetry(url: string, attempts = 4): Promise<unknown | null> {
   for (let i = 0; i < attempts; i++) {
     try {
-      const r = await fetch(url);
+      const r = await fetch(url, {
+        headers: { "User-Agent": "ResQNet/1.0 (national-risk-map)" },
+      });
       if (r.ok) return await r.json();
       if (r.status !== 429 && r.status < 500) return null;
     } catch {
@@ -64,6 +100,56 @@ async function fetchJsonRetry(url: string, attempts = 3): Promise<unknown | null
     await new Promise((res) => setTimeout(res, 400 * (i + 1)));
   }
   return null;
+}
+
+function isRiskBundle(value: unknown): value is IndiaRiskBundle {
+  const v = value as Partial<IndiaRiskBundle> | null;
+  return !!v && Array.isArray(v.points) && Array.isArray(v.cityRisks) && Array.isArray(v.states);
+}
+
+async function loadBundleSnapshot(): Promise<IndiaRiskBundle | null> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("weather_snapshots")
+      .select("raw, created_at")
+      .eq("source", "India Risk Bundle")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const raw = data?.raw;
+    if (data && isRiskBundle(raw)) {
+      const bundle = raw as unknown as IndiaRiskBundle;
+      return {
+        ...bundle,
+        fetched_at: bundle.fetched_at ?? data.created_at,
+        stale: true,
+      };
+    }
+  } catch {
+    // cache miss or backend unavailable
+  }
+  return null;
+}
+
+async function saveBundleSnapshot(payload: IndiaRiskBundle) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("weather_snapshots").insert({
+      lat: INDIA_CENTER[0],
+      lng: INDIA_CENTER[1],
+      source: "India Risk Bundle",
+      temperature: null,
+      humidity: null,
+      wind_speed_kmh: null,
+      pressure: null,
+      rainfall_mm: null,
+      raw: payload as never,
+    });
+  } catch {
+    // best-effort cache only
+  }
 }
 
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -261,6 +347,10 @@ export const geocodeIndia = createServerFn({ method: "GET" })
 export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(async () => {
   const now = new Date().toISOString();
 
+  if (INDIA_RISK_CACHE && Date.now() - INDIA_RISK_CACHE.at < INDIA_RISK_CACHE_TTL_MS) {
+    return INDIA_RISK_CACHE.payload;
+  }
+
   const [quakes, fires, weather, air] = await Promise.all([
     fetchUSGSQuakes(),
     fetchFIRMS(),
@@ -268,6 +358,44 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
     fetchAirGrid(INDIA_CITIES),
   ]);
   const airByCity = new Map(air.map((a) => [a.city.name, a]));
+  const weatherByCity = new Map(weather.map((w) => [w.city.name, w]));
+
+  // Published serverless/worker IPs can occasionally be throttled by Open-Meteo.
+  // If that happens, keep the national dashboard populated from the latest
+  // real-data snapshot, while still refreshing earthquake + FIRMS feeds live.
+  const minLiveGrid = Math.floor(INDIA_CITIES.length * 0.85);
+  if (weather.length < minLiveGrid || air.length < minLiveGrid) {
+    const snapshot = await loadBundleSnapshot();
+    if (snapshot?.cityRisks.length) {
+      const cachedDerived = snapshot.points
+        .filter((p) => WEATHER_HAZARDS.has(p.hazard) || p.hazard === "air_quality")
+        .map((p) => ({ ...p, source: p.source.includes("cached") ? p.source : `${p.source} · cached snapshot` }));
+      const points = [...quakes, ...fires, ...cachedDerived];
+      const counts = points.reduce((acc, p) => {
+        acc[p.hazard] = (acc[p.hazard] ?? 0) + 1;
+        return acc;
+      }, {} as Record<HazardKind, number>);
+      const payload: IndiaRiskBundle = {
+        ...snapshot,
+        fetched_at: now,
+        points,
+        counts,
+        ticker: [...points].sort((a, b) => b.score - a.score).slice(0, 40),
+        sources: [
+          { id: "usgs", name: "USGS Earthquakes", status: quakes.length ? "live" : "degraded", events: quakes.length },
+          { id: "firms", name: "NASA FIRMS (VIIRS)", status: fires.length ? "live" : (process.env.NASA_FIRMS_MAP_KEY ? "quiet" : "unconfigured"), events: fires.length },
+          { id: "openmeteo", name: "Open-Meteo (IMD-aligned thresholds)", status: weather.length >= minLiveGrid ? "live" : "cached", events: weather.length || snapshot.cityRisks.length },
+          { id: "openmeteo-aq", name: "Open-Meteo Air Quality (CAMS)", status: air.length >= minLiveGrid ? "live" : "cached", events: air.length || snapshot.points.filter((p) => p.hazard === "air_quality").length },
+          { id: "imd", name: "IMD bulletins", status: "advisory-only", events: 0 },
+          { id: "cwc", name: "CWC river levels", status: "advisory-only", events: 0 },
+          { id: "ncs", name: "NCS India seismology", status: "cross-checked via USGS", events: 0 },
+        ],
+        stale: true,
+      };
+      INDIA_RISK_CACHE = { at: Date.now(), payload };
+      return payload;
+    }
+  }
 
 
   const points: HazardPoint[] = [];
@@ -277,25 +405,27 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
 
   // ---- Derived per-city hazards from weather
   const cityRisks: CityRisk[] = [];
-  for (const w of weather) {
-    const c = w.city;
+  for (const c of INDIA_CITIES) {
+    const w = weatherByCity.get(c.name);
     const scores: Partial<Record<HazardKind, number>> = {};
 
-    // FLOOD: rainfall + riverine flag
-    const floodScore = Math.min(100,
-      w.rain24 * 1.1 + w.rain48 * 0.4 + (c.riverine ? 12 : 0) + (c.coastal ? 6 : 0)
-    );
-    if (floodScore >= 25) {
-      scores.flood = floodScore;
-      points.push({
-        id: `flood-${c.name}`, hazard: "flood",
-        lat: c.lat, lng: c.lng, score: floodScore, severity: sev(floodScore),
-        title: `${c.name} flood risk`,
-        detail: `${w.rain24.toFixed(0)} mm/24h, ${w.rain48.toFixed(0)} mm/48h${c.riverine ? " · riverine zone" : ""}`,
-        source: "Open-Meteo + terrain", timestamp: now,
-        meta: { rain24_mm: w.rain24, rain48_mm: w.rain48 },
-      });
-    }
+    if (w) {
+
+      // FLOOD: rainfall + riverine flag
+      const floodScore = Math.min(100,
+        w.rain24 * 1.1 + w.rain48 * 0.4 + (c.riverine ? 12 : 0) + (c.coastal ? 6 : 0)
+      );
+      if (floodScore >= 25) {
+        scores.flood = floodScore;
+        points.push({
+          id: `flood-${c.name}`, hazard: "flood",
+          lat: c.lat, lng: c.lng, score: floodScore, severity: sev(floodScore),
+          title: `${c.name} flood risk`,
+          detail: `${w.rain24.toFixed(0)} mm/24h, ${w.rain48.toFixed(0)} mm/48h${c.riverine ? " · riverine zone" : ""}`,
+          source: "Open-Meteo + terrain", timestamp: now,
+          meta: { rain24_mm: w.rain24, rain48_mm: w.rain48 },
+        });
+      }
 
     // CYCLONE: only meaningful for coastal cities; wind + gust + pressure proxy
     if (c.coastal) {
@@ -358,18 +488,19 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
       });
     }
 
-    // LIGHTNING: CAPE-based (J/kg)
-    if ((w.cape ?? 0) > 1000) {
-      const ltScore = Math.min(100, ((w.cape ?? 0) - 1000) / 30 + 35);
-      scores.lightning = ltScore;
-      points.push({
-        id: `lt-${c.name}`, hazard: "lightning",
-        lat: c.lat, lng: c.lng, score: ltScore, severity: sev(ltScore),
-        title: `${c.name} thunderstorm potential`,
-        detail: `CAPE ${(w.cape ?? 0).toFixed(0)} J/kg · gusts ${w.gust.toFixed(0)} km/h`,
-        source: "Open-Meteo", timestamp: now,
-        meta: { cape: w.cape ?? 0 },
-      });
+      // LIGHTNING: CAPE-based (J/kg)
+      if ((w.cape ?? 0) > 1000) {
+        const ltScore = Math.min(100, ((w.cape ?? 0) - 1000) / 30 + 35);
+        scores.lightning = ltScore;
+        points.push({
+          id: `lt-${c.name}`, hazard: "lightning",
+          lat: c.lat, lng: c.lng, score: ltScore, severity: sev(ltScore),
+          title: `${c.name} thunderstorm potential`,
+          detail: `CAPE ${(w.cape ?? 0).toFixed(0)} J/kg · gusts ${w.gust.toFixed(0)} km/h`,
+          source: "Open-Meteo", timestamp: now,
+          meta: { cape: w.cape ?? 0 },
+        });
+      }
     }
 
     // Earthquake city score: nearest quake within 300 km
@@ -434,7 +565,7 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
     return acc;
   }, {} as Record<HazardKind, number>);
 
-  return {
+  const payload: IndiaRiskBundle = {
     fetched_at: now,
     points,
     cityRisks,
@@ -451,4 +582,8 @@ export const getIndiaRiskBundle = createServerFn({ method: "GET" }).handler(asyn
       { id: "ncs", name: "NCS India seismology", status: "cross-checked via USGS", events: 0 },
     ],
   };
+
+  if (cityRisks.length) await saveBundleSnapshot(payload);
+  INDIA_RISK_CACHE = { at: Date.now(), payload };
+  return payload;
 });
