@@ -63,6 +63,44 @@ async function getSub(chatId: number): Promise<Sub | null> {
   return (data as Sub | null) ?? null;
 }
 
+function classifyReportType(text: string): string {
+  const t = text.toLowerCase();
+  if (/(flood|water|rain|overflow|inundat)/.test(t)) return "rising_water";
+  if (/(fire|smoke|burn|blaze)/.test(t)) return "fire";
+  if (/(road|block|tree|debris|landslide)/.test(t)) return "blocked_road";
+  if (/(bridge|collapse|crack)/.test(t)) return "damaged_bridge";
+  if (/(shelter|camp|crowd)/.test(t)) return "shelter_overcrowding";
+  if (/(power|electric|outage|blackout)/.test(t)) return "power_failure";
+  if (/(medical|injur|hurt|hospital|ambulance)/.test(t)) return "medical_help";
+  if (/(trap|stuck|stranded|rescue)/.test(t)) return "trapped_people";
+  return "other";
+}
+
+function classifySeverity(text: string): "watch" | "warning" | "danger" {
+  const t = text.toLowerCase();
+  if (/(urgent|emergency|danger|critical|severe|trapped|dying|life)/.test(t)) return "danger";
+  if (/(warning|serious|bad|heavy|major)/.test(t)) return "warning";
+  return "watch";
+}
+
+async function downloadTelegramFile(fileId: string): Promise<{ bytes: Buffer; mime: string } | null> {
+  const info = await tg("getFile", { file_id: fileId });
+  const infoJson = await info.json().catch(() => null) as { result?: { file_path?: string } } | null;
+  const path = infoJson?.result?.file_path;
+  if (!path) return null;
+  const key = process.env.TELEGRAM_API_KEY!;
+  const res = await fetch(`https://connector-gateway.lovable.dev/telegram/file/${path}`, {
+    headers: {
+      Authorization: `Bearer ${process.env.LOVABLE_API_KEY}`,
+      "X-Connection-Api-Key": key,
+    },
+  });
+  if (!res.ok) return null;
+  const ab = await res.arrayBuffer();
+  const mime = path.endsWith(".png") ? "image/png" : path.endsWith(".webp") ? "image/webp" : "image/jpeg";
+  return { bytes: Buffer.from(ab), mime };
+}
+
 async function needsLocation(chatId: number) {
   await tg("sendMessage", {
     chat_id: chatId,
