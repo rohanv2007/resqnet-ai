@@ -27,12 +27,6 @@ function haloRadius(score: number, zoom: number) {
   return base * scale;
 }
 
-type MarkerEntry = {
-  marker: L.Marker;
-  el: HTMLElement | null;
-  point: HazardPoint;
-};
-
 export interface IndiaRiskMapProps {
   center: [number, number];
   zoom: number;
@@ -51,79 +45,32 @@ export default function IndiaRiskMap({
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
+  const heatRef = useRef<L.LayerGroup | null>(null);
   const focusRef = useRef<L.Marker | null>(null);
-  const markersRef = useRef<Map<string, MarkerEntry>>(new Map());
-  const renderRef = useRef<(() => void) | null>(null);
-
-  const pointsRef = useRef(points);
-  const enabledRef = useRef(enabledLayers);
-  const heatmapRef = useRef(showHeatmap);
-  const onSelectRef = useRef(onSelect);
-
-  pointsRef.current = points;
-  enabledRef.current = enabledLayers;
-  heatmapRef.current = showHeatmap;
-  onSelectRef.current = onSelect;
-
-  const renderMarkers = () => {
-    const map = mapRef.current;
-    const layer = layerRef.current;
-    if (!map || !layer) return;
-
-    const currentZoom = map.getZoom();
-    const visible = pointsRef.current.filter((p) => enabledRef.current.has(p.hazard));
-    const visibleIds = new Set(visible.map((p) => p.id));
-
-    // Remove markers that are no longer visible
-    for (const [id, entry] of Array.from(markersRef.current.entries())) {
-      if (!visibleIds.has(id)) {
-        layer.removeLayer(entry.marker);
-        markersRef.current.delete(id);
-      }
-    }
-
-    const haloOpacity = heatmapRef.current ? 0.08 + zoomScale(currentZoom) * 0.1 : 0;
-
-    for (const p of visible) {
-      const existing = markersRef.current.get(p.id);
-      if (existing) {
-        updateMarker(existing, p, currentZoom, haloOpacity, onSelectRef.current);
-      } else {
-        const entry = createMarker(p, currentZoom, layer, haloOpacity, onSelectRef.current);
-        markersRef.current.set(p.id, entry);
-      }
-    }
-  };
-
-  renderRef.current = renderMarkers;
+  const renderPointsRef = useRef<(() => void) | null>(null);
 
   // Init map once
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
-
     const map = L.map(elRef.current, { center, zoom, worldCopyJump: false, preferCanvas: true });
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       attribution: "© OpenStreetMap, © CARTO", maxZoom: 18,
     }).addTo(map);
-
-    const layer = L.layerGroup().addTo(map);
-    layerRef.current = layer;
+    layerRef.current = L.layerGroup().addTo(map);
+    heatRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
-    const handleZoom = () => renderRef.current?.();
-    map.on("zoomend", handleZoom);
-
-    renderRef.current?.();
+    const onZoom = () => renderPointsRef.current?.();
+    map.on("zoomend", onZoom);
 
     const t = window.setTimeout(() => map.invalidateSize(), 60);
-
     return () => {
       window.clearTimeout(t);
-      map.off("zoomend", handleZoom);
-      markersRef.current.clear();
+      map.off("zoomend", onZoom);
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
+      heatRef.current = null;
       focusRef.current = null;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -133,9 +80,54 @@ export default function IndiaRiskMap({
     if (mapRef.current) mapRef.current.setView(center, zoom, { animate: true });
   }, [center, zoom]);
 
-  // Re-render markers when data / filters change
+  // Render points
   useEffect(() => {
-    renderRef.current?.();
+    const render = () => {
+      const layer = layerRef.current;
+      const heat = heatRef.current;
+      const map = mapRef.current;
+      if (!layer || !heat || !map) return;
+
+      const currentZoom = map.getZoom();
+      const scale = zoomScale(currentZoom);
+      layer.clearLayers();
+      heat.clearLayers();
+
+      const visible = points.filter((p) => enabledLayers.has(p.hazard));
+
+      if (showHeatmap) {
+        for (const p of visible) {
+          L.circleMarker([p.lat, p.lng], {
+            radius: haloRadius(p.score, currentZoom),
+            color: COLOR[p.severity],
+            weight: 0,
+            fillColor: COLOR[p.severity],
+            fillOpacity: 0.08 + scale * 0.1,
+          }).addTo(heat);
+        }
+      }
+
+      for (const p of visible) {
+        const m = L.circleMarker([p.lat, p.lng], {
+          radius: markerRadius(p.score, currentZoom),
+          color: COLOR[p.severity],
+          fillColor: COLOR[p.severity],
+          fillOpacity: 0.9,
+          weight: Math.max(1, 1.5 * scale),
+        }).addTo(layer);
+        m.bindPopup(
+          `<div style="font-family:system-ui;font-size:12px">
+            <div style="font-weight:600">${HAZARD_GLYPH[p.hazard]} ${p.title}</div>
+            <div style="color:#666;margin-top:2px">${p.detail}</div>
+            <div style="margin-top:4px"><b>Score:</b> ${p.score.toFixed(0)} · <b>Level:</b> ${p.severity}</div>
+            <div style="color:#888;font-size:11px">${p.source} · ${new Date(p.timestamp).toLocaleString()}</div>
+          </div>`,
+        );
+        if (onSelect) m.on("click", () => onSelect(p));
+      }
+    };
+    renderPointsRef.current = render;
+    render();
   }, [points, enabledLayers, showHeatmap, onSelect]);
 
   // Focus marker
@@ -146,8 +138,8 @@ export default function IndiaRiskMap({
     if (focusMarker) {
       const icon = L.divIcon({
         className: "",
-        html: `<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:999px;background:#2563EB;border:3px solid white;box-shadow:0 0 0 4px rgba(37,99,235,.35);"></div>`,
-        iconSize: [30, 30], iconAnchor: [15, 15],
+        html: `<div style="width:18px;height:18px;border-radius:999px;background:#2563EB;border:3px solid white;box-shadow:0 0 0 4px rgba(37,99,235,.35)"></div>`,
+        iconSize: [18, 18], iconAnchor: [9, 9],
       });
       focusRef.current = L.marker([focusMarker.lat, focusMarker.lng], { icon })
         .bindPopup(focusMarker.label ?? "Selected location")
@@ -157,130 +149,8 @@ export default function IndiaRiskMap({
   }, [focusMarker]);
 
   return (
-    <>
-      <div className="relative isolate z-0 overflow-hidden rounded-lg border bg-card" style={{ height }}>
-        <div ref={elRef} className="h-full w-full" />
-      </div>
-      <style>{`
-        .risk-marker {
-          position: relative;
-          width: 0;
-          height: 0;
-        }
-        .risk-marker-halo,
-        .risk-marker-core {
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          border-radius: 50%;
-          transition: width 0.25s ease-out, height 0.25s ease-out, opacity 0.25s ease-out, background-color 0.25s ease-out;
-          will-change: width, height, opacity;
-        }
-        .risk-marker-halo {
-          width: var(--size);
-          height: var(--size);
-          background: var(--color);
-          opacity: var(--opacity);
-        }
-        .risk-marker-core {
-          width: var(--size);
-          height: var(--size);
-          background: var(--color);
-          border: 2px solid rgba(255, 255, 255, 0.85);
-          color: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: calc(var(--size) * 0.55);
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-        }
-        .risk-marker-core span {
-          filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
-          line-height: 1;
-        }
-      `}</style>
-    </>
+    <div className="relative isolate z-0 overflow-hidden rounded-lg border bg-card" style={{ height }}>
+      <div ref={elRef} className="h-full w-full" />
+    </div>
   );
-}
-
-function createMarker(
-  p: HazardPoint,
-  zoom: number,
-  layer: L.LayerGroup,
-  haloOpacity: number,
-  onSelect?: (p: HazardPoint) => void,
-): MarkerEntry {
-  const core = markerRadius(p.score, zoom);
-  const halo = haloRadius(p.score, zoom);
-  const color = COLOR[p.severity];
-
-  const html = `
-    <div class="risk-marker" data-id="${p.id}">
-      <div class="risk-marker-halo" style="--size:${halo}px;--color:${color};--opacity:${haloOpacity}"></div>
-      <div class="risk-marker-core" style="--size:${core}px;--color:${color}">
-        <span>${HAZARD_GLYPH[p.hazard]}</span>
-      </div>
-    </div>
-  `;
-
-  const icon = L.divIcon({
-    className: "",
-    html,
-    iconSize: [100, 100],
-    iconAnchor: [50, 50],
-  });
-
-  const marker = L.marker([p.lat, p.lng], { icon }).addTo(layer);
-
-  marker.bindPopup(popupHtml(p));
-  if (onSelect) {
-    marker.on("click", () => onSelect(p));
-  }
-
-  return { marker, el: marker.getElement() ?? null, point: p };
-}
-
-function updateMarker(
-  entry: MarkerEntry,
-  p: HazardPoint,
-  zoom: number,
-  haloOpacity: number,
-  onSelect?: (p: HazardPoint) => void,
-) {
-  const core = markerRadius(p.score, zoom);
-  const halo = haloRadius(p.score, zoom);
-  const color = COLOR[p.severity];
-
-  if (entry.el) {
-    const haloEl = entry.el.querySelector(".risk-marker-halo") as HTMLElement | null;
-    const coreEl = entry.el.querySelector(".risk-marker-core") as HTMLElement | null;
-    if (haloEl) {
-      haloEl.style.setProperty("--size", `${halo}px`);
-      haloEl.style.setProperty("--color", color);
-      haloEl.style.setProperty("--opacity", String(haloOpacity));
-    }
-    if (coreEl) {
-      coreEl.style.setProperty("--size", `${core}px`);
-      coreEl.style.setProperty("--color", color);
-    }
-  }
-
-  entry.marker.setPopupContent(popupHtml(p));
-  entry.marker.off("click");
-  if (onSelect) {
-    entry.marker.on("click", () => onSelect(p));
-  }
-  entry.point = p;
-}
-
-function popupHtml(p: HazardPoint) {
-  return `
-    <div style="font-family:system-ui;font-size:12px">
-      <div style="font-weight:600">${HAZARD_GLYPH[p.hazard]} ${p.title}</div>
-      <div style="color:#666;margin-top:2px">${p.detail}</div>
-      <div style="margin-top:4px"><b>Score:</b> ${p.score.toFixed(0)} · <b>Level:</b> ${p.severity}</div>
-      <div style="color:#888;font-size:11px">${p.source} · ${new Date(p.timestamp).toLocaleString()}</div>
-    </div>
-  `;
 }
