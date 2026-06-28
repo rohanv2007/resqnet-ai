@@ -125,7 +125,7 @@ export function Topbar() {
               <ShieldCheck className="h-3.5 w-3.5 text-brand" />
             </p>
             <p className="text-[11px] capitalize text-muted-foreground">
-              {user?.role ?? "offline"} access
+              {user?.role === "authority" ? "Control room" : user?.role ?? "offline"} access
             </p>
           </div>
         </div>
