@@ -9,7 +9,6 @@ import {
   Package,
   Route,
   Settings,
-  Shield,
   LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+import { ResQNetLogo } from "@/components/logo/ResQNetLogo";
 import { useAuth } from "@/lib/hooks/useAuth";
 
 const allItems = [
