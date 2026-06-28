@@ -1,4 +1,4 @@
-import { Shield } from "lucide-react";
+import { ResQNetLogo } from "@/components/logo/ResQNetLogo";
 
 export function AuthLayout({
   title,
