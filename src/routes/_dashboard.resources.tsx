@@ -443,7 +443,7 @@ function DetailPanel({ resource, center }: { resource: EmergencyResource | null;
           <a href={`tel:${resource.contact.replace(/\s+/g, "")}`}>
             <Button size="sm"><Phone className="h-3.5 w-3.5" /> {resource.contact}</Button>
           </a>
-          <a href={`https://www.openstreetmap.org/directions?to=${resource.lat}%2C${resource.lng}`} target="_blank" rel="noopener noreferrer">
+          <a href={`https://maps.google.com/maps?daddr=${resource.lat},${resource.lng}`} target="_blank" rel="noopener noreferrer">
             <Button size="sm" variant="outline"><MapPin className="h-3.5 w-3.5" /> Directions</Button>
           </a>
         </div>
