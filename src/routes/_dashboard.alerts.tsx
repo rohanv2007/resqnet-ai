@@ -260,13 +260,15 @@ function Page_alerts() {
                 </div>
                 <div className="space-y-2">
                   <Label>Risk Level</Label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {(["low", "watch", "warning", "danger"] as const).map((level) => (
                       <Button
                         key={level}
                         type="button"
+                        size="sm"
                         variant={severity === level ? "default" : "outline"}
                         onClick={() => setSeverity(level)}
+                        className="capitalize"
                       >
                         {level}
                       </Button>
