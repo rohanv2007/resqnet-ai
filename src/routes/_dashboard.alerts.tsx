@@ -48,6 +48,7 @@ function Page_alerts() {
 
   const draftFn = useServerFn(draftAlert);
   const sendFn = useServerFn(sendAlert);
+  const approveFn = useServerFn(approveAlert);
   const activityFn = useServerFn(getAutoAlertActivity);
 
   const { data: activity, refetch: refetchActivity, isFetching: loadingActivity } = useQuery({
