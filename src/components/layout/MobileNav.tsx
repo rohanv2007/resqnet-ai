@@ -49,9 +49,7 @@ export function MobileNav() {
       <SheetContent side="left" className="w-80">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white">
-              <Shield className="h-4 w-4" />
-            </span>
+            <ResQNetLogo size={32} />
             ResQNet
           </SheetTitle>
         </SheetHeader>
