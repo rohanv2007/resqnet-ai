@@ -25,23 +25,23 @@ export function StatCard({
           "border-risk-danger/40 bg-risk-danger-bg text-risk-danger",
       )}
     >
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
+      <CardContent className="p-3 sm:p-5">
+        <div className="flex items-start justify-between gap-2 sm:gap-3">
+          <div className="min-w-0">
             <p
               className={cn(
-                "text-sm font-medium text-muted-foreground",
+                "text-xs font-medium text-muted-foreground sm:text-sm",
                 tone === "brand" && "text-white/80 dark:text-brand-dark",
                 tone === "danger" && "text-risk-danger",
               )}
             >
               {title}
             </p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight">{value}</p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight sm:mt-3 sm:text-3xl">{value}</p>
           </div>
           <span
             className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-full bg-brand-light text-brand",
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-light text-brand sm:h-9 sm:w-9",
               tone === "brand" && "bg-white/15 text-white dark:bg-brand/15 dark:text-brand",
               tone === "danger" && "bg-risk-danger/15 text-risk-danger",
             )}
@@ -51,7 +51,7 @@ export function StatCard({
         </div>
         <p
           className={cn(
-            "mt-3 text-xs text-muted-foreground",
+            "mt-2 text-[11px] leading-snug text-muted-foreground sm:mt-3 sm:text-xs",
             tone === "brand" && "text-white/80 dark:text-brand-dark",
             tone === "danger" && "text-risk-danger",
           )}
