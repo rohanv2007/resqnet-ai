@@ -418,6 +418,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           return Response.json({ ok: true });
         }
 
+        if (lower.startsWith("/stop")) {
           await supabaseAdmin.from("telegram_subscribers")
             .update({ active: false, updated_at: new Date().toISOString() })
             .eq("chat_id", chat.id);
