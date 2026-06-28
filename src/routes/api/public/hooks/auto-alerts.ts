@@ -139,7 +139,7 @@ export const Route = createFileRoute("/api/public/hooks/auto-alerts")({
               continue;
             }
 
-            const aiText = await aiCompose(s.first_name ?? "", bundle);
+            const aiText = await aiCompose(s.first_name ?? "", s.language ?? "english", bundle);
             const shelter = bundle.shelters?.[0];
             const mapLink = shelter
               ? `https://www.google.com/maps/dir/?api=1&origin=${s.lat},${s.lng}&destination=${shelter.lat},${shelter.lng}&travelmode=driving`
