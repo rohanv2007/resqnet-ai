@@ -190,28 +190,28 @@ function Page() {
 
       {/* Filters */}
       <Card className="rounded-lg">
-        <CardContent className="flex flex-wrap items-center gap-3 p-4">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <div className="relative w-full sm:w-64">
+        <CardContent className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center lg:gap-3 lg:p-4">
+          <div className="hidden lg:flex"><Filter className="h-4 w-4 text-muted-foreground" /></div>
+          <div className="relative col-span-full lg:w-64">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search resource, city, district…" className="pl-8" />
           </div>
           <Select value={stateFilter} onValueChange={(v) => { setStateFilter(v); setCityFilter("all"); }}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="All states" /></SelectTrigger>
+            <SelectTrigger className="w-full lg:w-44"><SelectValue placeholder="All states" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All India</SelectItem>
               {states.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={cityFilter} onValueChange={setCityFilter} disabled={stateFilter === "all"}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="All cities" /></SelectTrigger>
+            <SelectTrigger className="w-full lg:w-44"><SelectValue placeholder="All cities" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All districts</SelectItem>
               {citiesInState.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as EmergencyResourceType | "all")}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="All types" /></SelectTrigger>
+            <SelectTrigger className="w-full lg:w-48"><SelectValue placeholder="All types" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All resource types</SelectItem>
               {ALL_TYPES.map((t) => (
@@ -220,13 +220,13 @@ function Page() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ResourceStatus | "all")}>
-            <SelectTrigger className="w-40"><SelectValue placeholder="All statuses" /></SelectTrigger>
+            <SelectTrigger className="w-full lg:w-40"><SelectValue placeholder="All statuses" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
               {ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{STATUS_META[s].label}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button variant="ghost" size="sm" onClick={() => { setStateFilter("all"); setCityFilter("all"); setTypeFilter("all"); setStatusFilter("all"); setSearch(""); }}>Reset</Button>
+          <Button variant="ghost" size="sm" className="col-span-full lg:col-auto" onClick={() => { setStateFilter("all"); setCityFilter("all"); setTypeFilter("all"); setStatusFilter("all"); setSearch(""); }}>Reset filters</Button>
         </CardContent>
       </Card>
 
@@ -252,35 +252,39 @@ function Page() {
       </div>
 
       <Tabs defaultValue="deployment">
-        <TabsList>
-          <TabsTrigger value="deployment"><Sparkles className="mr-1 h-3.5 w-3.5" /> Deployment Engine</TabsTrigger>
-          <TabsTrigger value="list">Resource List</TabsTrigger>
-          <TabsTrigger value="shelters"><Building2 className="mr-1 h-3.5 w-3.5" /> Shelters</TabsTrigger>
-          <TabsTrigger value="hospitals"><HeartPulse className="mr-1 h-3.5 w-3.5" /> Hospitals</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="ai"><Brain className="mr-1 h-3.5 w-3.5" /> AI Recommendations</TabsTrigger>
-        </TabsList>
+        <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-max">
+            <TabsTrigger value="deployment"><Sparkles className="mr-1 h-3.5 w-3.5" /> Deployment</TabsTrigger>
+            <TabsTrigger value="list">Resource List</TabsTrigger>
+            <TabsTrigger value="shelters"><Building2 className="mr-1 h-3.5 w-3.5" /> Shelters</TabsTrigger>
+            <TabsTrigger value="hospitals"><HeartPulse className="mr-1 h-3.5 w-3.5" /> Hospitals</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="ai"><Brain className="mr-1 h-3.5 w-3.5" /> AI</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="deployment" className="mt-4 space-y-3">
           <Card className="rounded-lg">
-            <CardContent className="flex flex-wrap items-center gap-3 p-4">
-              <p className="text-sm font-medium">Scenario:</p>
-              {[
-                { k: "flood", l: "Flood", I: Waves },
-                { k: "cyclone", l: "Cyclone", I: Wind },
-                { k: "earthquake", l: "Earthquake", I: Mountain },
-                { k: "fire", l: "Fire", I: Flame },
-                { k: "medical", l: "Medical Surge", I: HeartPulse },
-                { k: "landslide", l: "Landslide", I: AlertTriangle },
-              ].map(({ k, l, I }) => (
-                <Button key={k} size="sm" variant={scenario === k ? "default" : "outline"} onClick={() => setScenario(k as keyof typeof EMERGENCY_PLAYBOOK)}>
-                  <I className="h-3.5 w-3.5" /> {l}
-                </Button>
-              ))}
-              <span className="ml-auto text-xs text-muted-foreground">Incident origin: <strong>{selectedLocation.name}, {selectedLocation.state}</strong></span>
+            <CardContent className="space-y-3 p-3 sm:p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-medium">Scenario:</p>
+                {[
+                  { k: "flood", l: "Flood", I: Waves },
+                  { k: "cyclone", l: "Cyclone", I: Wind },
+                  { k: "earthquake", l: "Earthquake", I: Mountain },
+                  { k: "fire", l: "Fire", I: Flame },
+                  { k: "medical", l: "Medical", I: HeartPulse },
+                  { k: "landslide", l: "Landslide", I: AlertTriangle },
+                ].map(({ k, l, I }) => (
+                  <Button key={k} size="sm" variant={scenario === k ? "default" : "outline"} onClick={() => setScenario(k as keyof typeof EMERGENCY_PLAYBOOK)}>
+                    <I className="h-3.5 w-3.5" /> {l}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Incident origin: <strong>{selectedLocation.name}, {selectedLocation.state}</strong></p>
             </CardContent>
           </Card>
-          <div className="grid gap-3 grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
             {recommendedDeployment.map(({ type, picks }) => (
               <Card key={type} className="rounded-lg">
                 <CardContent className="space-y-3 p-4">
@@ -309,7 +313,7 @@ function Page() {
         </TabsContent>
 
         <TabsContent value="list" className="mt-4">
-          <div className="grid gap-3 grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
             {filtered.slice(0, 60).map((r) => <ResourceCard key={r.id} r={r} onClick={() => setSelected(r)} />)}
           </div>
           {filtered.length > 60 && (
@@ -503,7 +507,7 @@ function ShelterIntel({ shelters }: { shelters: EmergencyResource[] }) {
         <KpiSmall label="Capacity" value={capacity.toLocaleString()} />
         <KpiSmall label="At capacity" value={occupied} accent="text-red-600" />
       </div>
-      <div className="grid gap-3 grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
         {shelters.slice(0, 30).map((s) => {
           const pct = s.capacity ? Math.round((s.currentLoad / s.capacity) * 100) : 0;
           return (
@@ -547,7 +551,7 @@ function HospitalIntel({ hospitals }: { hospitals: EmergencyResource[] }) {
         <KpiSmall label="Free ICU" value={icuFree.toLocaleString()} accent="text-cyan-600" />
         <KpiSmall label="Trauma centers" value={trauma} accent="text-red-600" />
       </div>
-      <div className="grid gap-3 grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
         {hospitals.slice(0, 30).map((h) => {
           const occ = h.beds ? Math.round((h.currentLoad / h.beds) * 100) : 0;
           return (

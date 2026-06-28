@@ -496,24 +496,20 @@ function Page_simulation() {
       />
 
       {/* Top status strip */}
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-4 py-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border bg-card px-3 py-2.5 text-xs sm:px-4 sm:py-3 sm:text-sm">
         <div className="flex items-center gap-2">
           <span className={`h-2 w-2 animate-pulse rounded-full ${running ? "bg-risk-danger" : "bg-risk-low"}`} />
-          <span className="text-sm font-semibold">
-            {running ? (replay ? "REPLAY" : "LIVE SIMULATION") : "STANDBY"}
+          <span className="font-semibold">
+            {running ? (replay ? "REPLAY" : "LIVE SIM") : "STANDBY"}
           </span>
         </div>
-        <span className="text-muted-foreground">·</span>
-        <span className="text-sm">EOC: <strong>{selectedLocation.name}</strong></span>
-        <span className="text-muted-foreground">·</span>
-        <span className="font-mono text-sm">T+{current?.hour.toFixed(2)}h / {params.duration_hours}h</span>
-        <span className="text-muted-foreground">·</span>
+        <span className="truncate"><span className="text-muted-foreground">EOC:</span> <strong>{selectedLocation.name}</strong></span>
+        <span className="font-mono">T+{current?.hour.toFixed(2)}h / {params.duration_hours}h</span>
         <StatusBadge status={current?.level ?? "low"}>
           <span className="h-1.5 w-1.5 rounded-full bg-current" />
         </StatusBadge>
-        <span className="text-muted-foreground">·</span>
-        <span className="text-sm">Confidence <strong className="font-mono">{current?.confidence}%</strong></span>
-        <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+        <span><span className="text-muted-foreground">Conf</span> <strong className="font-mono">{current?.confidence}%</strong></span>
+        <div className="ml-auto hidden items-center gap-2 text-xs text-muted-foreground md:flex">
           <Radio className="h-3.5 w-3.5" /> NDRF · Chennai Corp · TN SDMA
         </div>
       </div>
@@ -647,31 +643,31 @@ function Page_simulation() {
 
           {/* Map + scrubber */}
           <Card className="rounded-lg shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div className="space-y-1">
+            <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1 min-w-0">
                 <CardTitle className="text-base">Geospatial Impact Map</CardTitle>
                 <p className="text-xs text-muted-foreground">
-                  Wind-driven plume · flood depth heat · live distress beacons
+                  Wind-driven plume · flood depth · live distress beacons
                 </p>
               </div>
-              <Badge variant="outline" className="font-mono text-xs">
-                {disasterLabels[params.disaster]} · intensity {current?.intensity}/100
+              <Badge variant="outline" className="self-start font-mono text-[10px] sm:text-xs">
+                {disasterLabels[params.disaster]} · {current?.intensity}/100
               </Badge>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-3 sm:p-6">
               <ConfidenceBar confidence={current?.confidence ?? 70} />
               <MapView
                 center={center}
                 shelters={shelters}
                 reports={distressMarkers}
                 simulationZones={impactZones}
-                height="430px"
+                height="380px"
               />
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground sm:text-xs">
                   <span>T+0h</span>
-                  <span className="font-mono">
-                    Step {stepIndex + 1} / {frames.length} · hour-by-hour replay
+                  <span className="truncate font-mono text-center">
+                    Step {stepIndex + 1}/{frames.length}
                   </span>
                   <span>T+{params.duration_hours}h</span>
                 </div>
@@ -916,16 +912,16 @@ function KPI({
 }) {
   return (
     <Card className="rounded-lg shadow-sm">
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">{title}</p>
-          <div className="flex items-center gap-1.5">
+      <CardContent className="p-3 sm:p-5">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-xs text-muted-foreground sm:text-sm">{title}</p>
+          <div className="flex shrink-0 items-center gap-1.5">
             {live && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-risk-danger" />}
             {icon && <span className="text-muted-foreground">{icon}</span>}
           </div>
         </div>
-        <p className={`mt-3 text-3xl font-semibold tabular-nums ${accent ?? ""}`}>{value}</p>
-        <p className="mt-2 text-xs text-muted-foreground">{detail}</p>
+        <p className={`mt-2 text-xl font-semibold tabular-nums sm:mt-3 sm:text-3xl ${accent ?? ""}`}>{value}</p>
+        <p className="mt-1 truncate text-[10px] text-muted-foreground sm:mt-2 sm:text-xs">{detail}</p>
       </CardContent>
     </Card>
   );
