@@ -74,9 +74,7 @@ function Page_alerts() {
         },
       });
       if (drafted.status !== "approved") {
-        // Auto-approve here for the demo control room
-        const { approveAlert } = await import("@/lib/alerts.functions");
-        await useServerFn(approveAlert)({ data: { id: drafted.id } });
+        await approveFn({ data: { id: drafted.id } });
       }
       return sendFn({ data: { id: drafted.id } });
     },
