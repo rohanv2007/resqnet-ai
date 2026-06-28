@@ -29,7 +29,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { LastUpdated, StatusBadge } from "@/components/shared";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRiskData } from "@/lib/hooks/useRiskData";
-import { draftAlert, sendAlert, getAutoAlertActivity } from "@/lib/alerts.functions";
+import { draftAlert, sendAlert, getAutoAlertActivity, approveAlert } from "@/lib/alerts.functions";
 
 const SILENT_CHANNELS = ["SMS", "IVR", "WhatsApp", "Push"] as const;
 
