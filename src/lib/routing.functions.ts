@@ -110,11 +110,8 @@ const NearbyShelters = z.object({
 export const getNearbyShelters = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => NearbyShelters.parse(d))
   .handler(async ({ data }) => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supa = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
-      auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
-    });
-    const { data: shelters } = await supa.from("shelters").select("*");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: shelters } = await supabaseAdmin.from("shelters").select("*");
     const ranked = (shelters ?? [])
       .map((s) => ({ ...s, distance_km: +haversineKm([data.lat, data.lng], [s.lat, s.lng]).toFixed(2) }))
       .sort((a, b) => a.distance_km - b.distance_km)
