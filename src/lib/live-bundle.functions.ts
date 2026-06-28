@@ -190,7 +190,7 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
       { data: rResources },
     ] = await Promise.all([
       supabaseAdmin.from("citizen_reports").select("*").order("created_at", { ascending: false }).limit(100),
-      supa.from("shelters").select("*").order("name"),
+      supabaseAdmin.from("shelters").select("*").order("name"),
       supa.from("alerts").select("*").order("created_at", { ascending: false }).limit(50),
       supa.from("road_status").select("*").in("status", ["blocked", "flooded"]).limit(100),
       supabaseAdmin.from("resources").select("*").order("updated_at", { ascending: false }).limit(100),
