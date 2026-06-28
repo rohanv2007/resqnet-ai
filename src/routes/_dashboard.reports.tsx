@@ -228,9 +228,39 @@ function Page_reports() {
   const { user } = useAuth();
   const [tab, setTab] = useState<"all" | ReportStatus>("all");
   const isCitizen = user?.role === "citizen";
+  const isResponder = user?.role === "authority" || user?.role === "ngo" || user?.role === "admin";
+  const verifyFn = useServerFn(updateReportStatus);
+  const deleteFn = useServerFn(deleteReport);
+  const qc = useQueryClient();
+
+  // Citizens see only verified/resolved reports; responders see everything.
+  const visibleReports = isResponder
+    ? reports
+    : reports.filter((r) => r.status === "verified" || r.status === "resolved");
 
   const filteredReports =
-    tab === "all" ? reports : reports.filter((report) => report.status === tab);
+    tab === "all" ? visibleReports : visibleReports.filter((report) => report.status === tab);
+
+  async function handleVerify(id: string, status: "verified" | "resolved") {
+    try {
+      await verifyFn({ data: { id, status } });
+      toast.success(status === "verified" ? "Report verified" : "Report marked resolved");
+      qc.invalidateQueries({ queryKey: ["live-bundle"] });
+    } catch (e) {
+      toast.error("Action failed", { description: (e as Error).message });
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Delete this report? This cannot be undone.")) return;
+    try {
+      await deleteFn({ data: { id } });
+      toast.success("Report deleted");
+      qc.invalidateQueries({ queryKey: ["live-bundle"] });
+    } catch (e) {
+      toast.error("Delete failed", { description: (e as Error).message });
+    }
+  }
 
   return (
     <div className="space-y-6">
