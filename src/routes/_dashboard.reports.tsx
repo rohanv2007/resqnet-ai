@@ -255,8 +255,21 @@ function Page_reports() {
     if (!confirm("Delete this report? This cannot be undone.")) return;
     try {
       await deleteFn({ data: { id } });
+      qc.setQueriesData<{ reports?: typeof reports; stats?: { citizenReports?: number } }>(
+        { queryKey: ["live-bundle"] },
+        (old) => {
+          if (!old?.reports) return old;
+          return {
+            ...old,
+            reports: old.reports.filter((report) => report.id !== id),
+            stats: old.stats
+              ? { ...old.stats, citizenReports: Math.max(0, (old.stats.citizenReports ?? 1) - 1) }
+              : old.stats,
+          };
+        },
+      );
       toast.success("Report deleted");
-      qc.invalidateQueries({ queryKey: ["live-bundle"] });
+      await qc.invalidateQueries({ queryKey: ["live-bundle"], refetchType: "active" });
     } catch (e) {
       toast.error("Delete failed", { description: (e as Error).message });
     }
