@@ -912,16 +912,16 @@ function KPI({
 }) {
   return (
     <Card className="rounded-lg shadow-sm">
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">{title}</p>
-          <div className="flex items-center gap-1.5">
+      <CardContent className="p-3 sm:p-5">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-xs text-muted-foreground sm:text-sm">{title}</p>
+          <div className="flex shrink-0 items-center gap-1.5">
             {live && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-risk-danger" />}
             {icon && <span className="text-muted-foreground">{icon}</span>}
           </div>
         </div>
-        <p className={`mt-3 text-3xl font-semibold tabular-nums ${accent ?? ""}`}>{value}</p>
-        <p className="mt-2 text-xs text-muted-foreground">{detail}</p>
+        <p className={`mt-2 text-xl font-semibold tabular-nums sm:mt-3 sm:text-3xl ${accent ?? ""}`}>{value}</p>
+        <p className="mt-1 truncate text-[10px] text-muted-foreground sm:mt-2 sm:text-xs">{detail}</p>
       </CardContent>
     </Card>
   );
