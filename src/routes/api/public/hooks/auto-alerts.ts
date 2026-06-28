@@ -13,6 +13,7 @@ type Sub = {
   last_auto_alert_at: string | null;
   last_auto_alert_level: string | null;
   last_auto_alert_key: string | null;
+  language: string | null;
 };
 
 const LEVEL_RANK: Record<string, number> = { low: 0, watch: 1, warning: 2, danger: 3 };
