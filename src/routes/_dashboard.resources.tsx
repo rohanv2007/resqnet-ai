@@ -387,6 +387,8 @@ function ResourceCard({ r, onClick }: { r: EmergencyResource; onClick: () => voi
 }
 
 function DetailPanel({ resource, center }: { resource: EmergencyResource | null; center: [number, number] }) {
+  const [copied, setCopied] = useState(false);
+
   if (!resource) {
     return (
       <Card className="rounded-lg">
@@ -401,7 +403,36 @@ function DetailPanel({ resource, center }: { resource: EmergencyResource | null;
   const status = STATUS_META[resource.status];
   const distance = haversineKm(center, [resource.lat, resource.lng]);
   const eta = Math.round((distance / 50) * 60);
-  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${resource.lat},${resource.lng}`)}&travelmode=driving`;
+  const origin = `${center[0].toFixed(6)},${center[1].toFixed(6)}`;
+  const destination = `${resource.lat.toFixed(6)},${resource.lng.toFixed(6)}`;
+  const googleDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+  const osmDirectionsUrl = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${encodeURIComponent(`${origin};${destination}`)}`;
+
+  const openGoogleDirections = () => {
+    // Lovable preview runs inside a sandboxed iframe; opening Google Maps in a
+    // sandboxed _blank tab can show ERR_BLOCKED_BY_RESPONSE. A user-clicked
+    // top-level navigation avoids that, while production still works normally.
+    try {
+      if (window.top && window.top !== window) {
+        window.top.location.href = googleDirectionsUrl;
+        return;
+      }
+    } catch {
+      // Cross-origin top navigation can be restricted by the host; fall through.
+    }
+    window.location.href = googleDirectionsUrl;
+  };
+
+  const copyGoogleLink = async () => {
+    try {
+      await navigator.clipboard.writeText(googleDirectionsUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      window.prompt("Copy this Google Maps directions link", googleDirectionsUrl);
+    }
+  };
+
   return (
     <Card className="rounded-lg">
       <CardContent className="space-y-4 p-5">
@@ -441,13 +472,22 @@ function DetailPanel({ resource, center }: { resource: EmergencyResource | null;
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <a href={`tel:${resource.contact.replace(/\s+/g, "")}`}>
-            <Button size="sm"><Phone className="h-3.5 w-3.5" /> {resource.contact}</Button>
-          </a>
-          <a href={directionsUrl} target="_blank" rel="noopener noreferrer">
-            <Button size="sm" variant="outline"><MapPin className="h-3.5 w-3.5" /> Directions</Button>
-          </a>
+          <Button asChild size="sm">
+            <a href={`tel:${resource.contact.replace(/\s+/g, "")}`}><Phone className="h-3.5 w-3.5" /> {resource.contact}</a>
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={openGoogleDirections}>
+            <MapPin className="h-3.5 w-3.5" /> Google directions
+          </Button>
+          <Button asChild size="sm" variant="secondary">
+            <a href={osmDirectionsUrl} target="_blank" rel="noopener noreferrer">OSM backup</a>
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={copyGoogleLink}>
+            {copied ? "Copied" : "Copy link"}
+          </Button>
         </div>
+        <p className="text-[11px] text-muted-foreground">
+          If Google is blocked by the preview/browser, use the OSM backup or copy the link and open it outside the preview.
+        </p>
       </CardContent>
     </Card>
   );
