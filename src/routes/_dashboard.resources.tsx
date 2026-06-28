@@ -252,14 +252,16 @@ function Page() {
       </div>
 
       <Tabs defaultValue="deployment">
-        <TabsList>
-          <TabsTrigger value="deployment"><Sparkles className="mr-1 h-3.5 w-3.5" /> Deployment Engine</TabsTrigger>
-          <TabsTrigger value="list">Resource List</TabsTrigger>
-          <TabsTrigger value="shelters"><Building2 className="mr-1 h-3.5 w-3.5" /> Shelters</TabsTrigger>
-          <TabsTrigger value="hospitals"><HeartPulse className="mr-1 h-3.5 w-3.5" /> Hospitals</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="ai"><Brain className="mr-1 h-3.5 w-3.5" /> AI Recommendations</TabsTrigger>
-        </TabsList>
+        <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-max">
+            <TabsTrigger value="deployment"><Sparkles className="mr-1 h-3.5 w-3.5" /> Deployment</TabsTrigger>
+            <TabsTrigger value="list">Resource List</TabsTrigger>
+            <TabsTrigger value="shelters"><Building2 className="mr-1 h-3.5 w-3.5" /> Shelters</TabsTrigger>
+            <TabsTrigger value="hospitals"><HeartPulse className="mr-1 h-3.5 w-3.5" /> Hospitals</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="ai"><Brain className="mr-1 h-3.5 w-3.5" /> AI</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="deployment" className="mt-4 space-y-3">
           <Card className="rounded-lg">
