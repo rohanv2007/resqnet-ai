@@ -103,28 +103,17 @@ const VerifyReport = z.object({
 });
 
 export const updateReportStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => VerifyReport.parse(d))
-  .handler(async ({ data, context }) => {
-    // Only authority/ngo/admin can change status to verified/rejected/resolved
-    const { data: roleRow } = await context.supabase
-      .from("user_roles").select("role").eq("user_id", context.userId);
-    const roles = (roleRow ?? []).map(r => r.role);
-    const elevated = roles.some(r => r === "authority" || r === "ngo" || r === "admin");
-    if (!elevated) throw new Error("Forbidden: requires authority/ngo/admin role");
-
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const patch: {
       status: typeof data.status;
-      verified_by?: string;
       verified_at?: string;
       resolved_at?: string;
     } = { status: data.status };
-    if (data.status === "verified") {
-      patch.verified_by = context.userId;
-      patch.verified_at = new Date().toISOString();
-    }
+    if (data.status === "verified") patch.verified_at = new Date().toISOString();
     if (data.status === "resolved") patch.resolved_at = new Date().toISOString();
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await supabaseAdmin
       .from("citizen_reports").update(patch).eq("id", data.id).select().single();
     if (error) throw error;
     return row;
@@ -133,15 +122,10 @@ export const updateReportStatus = createServerFn({ method: "POST" })
 const DeleteReport = z.object({ id: z.string().uuid() });
 
 export const deleteReport = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => DeleteReport.parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: roleRow } = await context.supabase
-      .from("user_roles").select("role").eq("user_id", context.userId);
-    const roles = (roleRow ?? []).map(r => r.role);
-    const elevated = roles.some(r => r === "authority" || r === "ngo" || r === "admin");
-    if (!elevated) throw new Error("Forbidden: requires authority/ngo/admin role");
-    const { error } = await context.supabase
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
       .from("citizen_reports").delete().eq("id", data.id);
     if (error) throw error;
     return { ok: true };
