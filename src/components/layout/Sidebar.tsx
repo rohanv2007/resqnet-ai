@@ -59,7 +59,7 @@ export function Sidebar() {
           <p className="px-3 pb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Operations
           </p>
-          {navItems.map((item) => {
+          {visibleNav.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
             return (
