@@ -13,6 +13,7 @@ type Sub = {
   last_auto_alert_at: string | null;
   last_auto_alert_level: string | null;
   last_auto_alert_key: string | null;
+  language: string | null;
 };
 
 const LEVEL_RANK: Record<string, number> = { low: 0, watch: 1, warning: 2, danger: 3 };
@@ -29,7 +30,7 @@ async function tg(method: string, body: unknown) {
   });
 }
 
-async function aiCompose(name: string, bundle: Awaited<ReturnType<typeof getLiveRiskBundle>>): Promise<string> {
+async function aiCompose(name: string, language: string, bundle: Awaited<ReturnType<typeof getLiveRiskBundle>>): Promise<string> {
   const apiKey = process.env.LOVABLE_API_KEY;
   const ctx = {
     name: name || "friend",
@@ -53,6 +54,11 @@ async function aiCompose(name: string, bundle: Awaited<ReturnType<typeof getLive
   };
   const fallback = `⚠️ *Alert near you* — ${ctx.overall.level.toUpperCase()} (${ctx.overall.score}/100)\n${ctx.top_risks.map(r => `• ${r.type}: ${r.level}`).join("\n") || "Conditions deteriorating"}\nStay alert and avoid risky areas.`;
   if (!apiKey) return fallback;
+  const lang = (language || "english").toLowerCase();
+  const bilingual = lang !== "english";
+  const sys = bilingual
+    ? `You are ResQNet's emergency alert writer. Output TWO sections in Markdown:\n1) An English alert (under 80 words), addressed by first name if given, 2-3 bullets max, one concrete safety action, end "Stay safe."\n2) A separator line "— — — — — — — — — —" then header "🌐 *${lang.toUpperCase()}*" then the SAME alert in ${lang} using its native script (under 80 words). No emoji flood (max 3 per section).`
+    : `You are ResQNet's emergency alert writer. Write a SHORT (under 90 words) Telegram alert in English, addressed by first name if given. 2-3 bullets max, one concrete safety action, end "Stay safe." Markdown. Max 3 emojis.`;
   try {
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -60,10 +66,7 @@ async function aiCompose(name: string, bundle: Awaited<ReturnType<typeof getLive
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          {
-            role: "system",
-            content: "You are ResQNet's emergency alert writer. Write a SHORT (under 90 words) Telegram alert in English, addressed to the user by first name if given. Use 2-3 line bullets max. Be specific about the threat using the JSON data, give one concrete safety action, end with 'Stay safe.' Use Markdown. No emojis flood — max 3.",
-          },
+          { role: "system", content: sys },
           { role: "user", content: `Compose alert from JSON:\n${JSON.stringify(ctx)}` },
         ],
       }),
@@ -84,7 +87,7 @@ export const Route = createFileRoute("/api/public/hooks/auto-alerts")({
 
         const { data: subs, error } = await supabaseAdmin
           .from("telegram_subscribers")
-          .select("chat_id,first_name,lat,lng,alert_radius_km,last_auto_alert_at,last_auto_alert_level,last_auto_alert_key")
+          .select("chat_id,first_name,lat,lng,alert_radius_km,last_auto_alert_at,last_auto_alert_level,last_auto_alert_key,language")
           .eq("active", true)
           .not("lat", "is", null)
           .not("lng", "is", null);
@@ -136,7 +139,7 @@ export const Route = createFileRoute("/api/public/hooks/auto-alerts")({
               continue;
             }
 
-            const aiText = await aiCompose(s.first_name ?? "", bundle);
+            const aiText = await aiCompose(s.first_name ?? "", s.language ?? "english", bundle);
             const shelter = bundle.shelters?.[0];
             const mapLink = shelter
               ? `https://www.google.com/maps/dir/?api=1&origin=${s.lat},${s.lng}&destination=${shelter.lat},${shelter.lng}&travelmode=driving`
