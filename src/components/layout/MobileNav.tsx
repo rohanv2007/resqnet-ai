@@ -70,6 +70,16 @@ export function MobileNav() {
             );
           })}
         </nav>
+        <div className="mt-4 border-t px-4 pt-4">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-muted-foreground"
+            onClick={() => void logout()}
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Button>
+        </div>
       </SheetContent>
     </Sheet>
   );
