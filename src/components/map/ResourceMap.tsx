@@ -37,6 +37,8 @@ export default function ResourceMap({ resources, center, zoom = 5, height = "520
   const canvasLayerRef = useRef<L.LayerGroup | null>(null);
   const emojiLayerRef = useRef<L.LayerGroup | null>(null);
   const rendererRef = useRef<L.Canvas | null>(null);
+  const renderFrameRef = useRef<number | null>(null);
+  const mountedRef = useRef(false);
   const dataRef = useRef<EmergencyResource[]>(resources);
   const highlightRef = useRef<string | undefined>(highlightId);
   const onSelectRef = useRef(onSelect);
@@ -52,6 +54,7 @@ export default function ResourceMap({ resources, center, zoom = 5, height = "520
     if (!container) return;
     if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
     delete container._leaflet_id;
+    mountedRef.current = true;
 
     const map = L.map(container, {
       center,
@@ -59,11 +62,11 @@ export default function ResourceMap({ resources, center, zoom = 5, height = "520
       scrollWheelZoom: true,
       worldCopyJump: false,
       preferCanvas: true,
-      zoomAnimation: true,
+      zoomAnimation: false,
       markerZoomAnimation: false,
     });
     mapRef.current = map;
-    rendererRef.current = L.canvas({ padding: 0.3 });
+    rendererRef.current = L.canvas({ padding: 0.3 }).addTo(map);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; OpenStreetMap',
@@ -75,11 +78,12 @@ export default function ResourceMap({ resources, center, zoom = 5, height = "520
     canvasLayerRef.current = L.layerGroup().addTo(map);
     emojiLayerRef.current = L.layerGroup().addTo(map);
 
-    const render = () => {
+    const renderNow = () => {
+      if (!mountedRef.current || mapRef.current !== map) return;
       const canvasLayer = canvasLayerRef.current;
       const emojiLayer = emojiLayerRef.current;
       const renderer = rendererRef.current;
-      if (!canvasLayer || !emojiLayer || !renderer) return;
+      if (!canvasLayer || !emojiLayer || !renderer || !(renderer as L.Canvas & { _ctx?: CanvasRenderingContext2D })._ctx) return;
       canvasLayer.clearLayers();
       emojiLayer.clearLayers();
 
@@ -124,6 +128,13 @@ export default function ResourceMap({ resources, center, zoom = 5, height = "520
         }
       }
     };
+    const render = () => {
+      if (renderFrameRef.current !== null) window.cancelAnimationFrame(renderFrameRef.current);
+      renderFrameRef.current = window.requestAnimationFrame(() => {
+        renderFrameRef.current = null;
+        renderNow();
+      });
+    };
 
     render();
     map.on("moveend zoomend", render);
@@ -131,8 +142,15 @@ export default function ResourceMap({ resources, center, zoom = 5, height = "520
 
     const t = window.setTimeout(() => map.invalidateSize(), 0);
     return () => {
+      mountedRef.current = false;
       window.clearTimeout(t);
+      if (renderFrameRef.current !== null) {
+        window.cancelAnimationFrame(renderFrameRef.current);
+        renderFrameRef.current = null;
+      }
       map.off("moveend zoomend", render);
+      canvasLayerRef.current?.clearLayers();
+      emojiLayerRef.current?.clearLayers();
       map.remove();
       mapRef.current = null;
       canvasLayerRef.current = null;
