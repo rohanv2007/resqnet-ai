@@ -324,6 +324,37 @@ function Page_reports() {
                           <span>by {report.reportedBy}</span>
                           <LastUpdated timestamp={report.reportedAt} />
                         </div>
+                        {isResponder && (
+                          <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+                            {report.status !== "verified" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleVerify(report.id, "verified")}
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                                Verify
+                              </Button>
+                            )}
+                            {report.status !== "resolved" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleVerify(report.id, "resolved")}
+                              >
+                                Mark resolved
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDelete(report.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     );
                   })
