@@ -244,15 +244,3 @@ export const getAutoAlertActivity = createServerFn({ method: "GET" })
     };
   });
 
-export const triggerAutoAlertSweep = createServerFn({ method: "POST" })
-  .handler(async () => {
-    // Call internal hook so we reuse the exact production sweep logic
-    const url = (process.env.PUBLIC_APP_URL ?? "") + "/api/public/hooks/auto-alerts";
-    if (!url.startsWith("http")) {
-      // fallback: directly import logic-less message
-      return { ok: false, error: "PUBLIC_APP_URL not set — trigger via cron" };
-    }
-    const r = await fetch(url, { method: "POST" });
-    const j = await r.json().catch(() => ({}));
-    return j;
-  });
