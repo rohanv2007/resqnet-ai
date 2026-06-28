@@ -41,12 +41,13 @@ export function MobileNav() {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" size="icon">
+        <Button variant="outline" size="icon" className="h-9 w-9">
           <Menu className="h-4 w-4" />
           <span className="sr-only">Open navigation</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-80">
+      <SheetContent side="left" className="w-72 p-0 sm:w-80">
+        <div className="p-4">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <ResQNetLogo size={32} />
