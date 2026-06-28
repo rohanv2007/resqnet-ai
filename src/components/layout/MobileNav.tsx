@@ -79,6 +79,7 @@ export function MobileNav() {
             Logout
           </Button>
         </div>
+        </div>
       </SheetContent>
     </Sheet>
   );
