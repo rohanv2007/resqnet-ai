@@ -6,11 +6,12 @@ export const getDashboardSummary = createServerFn({ method: "GET" })
     const supa = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
       auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
     });
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const [activeAlerts, verifiedReports, openShelters, recentRisk, latestWeather] = await Promise.all([
       supa.from("alerts").select("id,severity,disaster,location_name,sent_at,status").in("status",["sent","approved"]).order("created_at",{ascending:false}).limit(20),
       supa.from("citizen_reports").select("id,type,severity,location_name,status,created_at").order("created_at",{ascending:false}).limit(20),
-      supa.from("shelters").select("id,name,capacity,occupancy,status,district,state,lat,lng"),
+      supabaseAdmin.from("shelters").select("id,name,capacity,occupancy,status,district,state,lat,lng"),
       supa.from("risk_scores").select("*").order("computed_at",{ascending:false}).limit(50),
       supa.from("weather_snapshots").select("*").order("created_at",{ascending:false}).limit(1),
     ]);
