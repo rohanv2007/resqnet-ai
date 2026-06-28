@@ -190,7 +190,7 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
       { data: rResources },
     ] = await Promise.all([
       supabaseAdmin.from("citizen_reports").select("*").order("created_at", { ascending: false }).limit(100),
-      supa.from("shelters").select("*").order("name"),
+      supabaseAdmin.from("shelters").select("*").order("name"),
       supa.from("alerts").select("*").order("created_at", { ascending: false }).limit(50),
       supa.from("road_status").select("*").in("status", ["blocked", "flooded"]).limit(100),
       supabaseAdmin.from("resources").select("*").order("updated_at", { ascending: false }).limit(100),
@@ -353,7 +353,7 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
       capacity: s.capacity ?? 0,
       occupancy: s.occupancy ?? 0,
       contact: s.contact ?? "",
-      facilities: s.facilities ?? [],
+      facilities: (Array.isArray(s.facilities) ? s.facilities : []) as string[],
       status: (s.status ?? "open") as "open" | "full" | "closed",
       distanceKm: Math.round(haversineKm([data.lat, data.lng], [Number(s.lat), Number(s.lng)]) * 10) / 10,
     }));
