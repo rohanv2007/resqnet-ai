@@ -87,7 +87,7 @@ export const Route = createFileRoute("/api/public/hooks/auto-alerts")({
 
         const { data: subs, error } = await supabaseAdmin
           .from("telegram_subscribers")
-          .select("chat_id,first_name,lat,lng,alert_radius_km,last_auto_alert_at,last_auto_alert_level,last_auto_alert_key")
+          .select("chat_id,first_name,lat,lng,alert_radius_km,last_auto_alert_at,last_auto_alert_level,last_auto_alert_key,language")
           .eq("active", true)
           .not("lat", "is", null)
           .not("lng", "is", null);
