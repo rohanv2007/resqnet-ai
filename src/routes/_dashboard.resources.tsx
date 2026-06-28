@@ -280,7 +280,7 @@ function Page() {
               <span className="ml-auto text-xs text-muted-foreground">Incident origin: <strong>{selectedLocation.name}, {selectedLocation.state}</strong></span>
             </CardContent>
           </Card>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 grid-cols-2 xl:grid-cols-3">
             {recommendedDeployment.map(({ type, picks }) => (
               <Card key={type} className="rounded-lg">
                 <CardContent className="space-y-3 p-4">
@@ -309,7 +309,7 @@ function Page() {
         </TabsContent>
 
         <TabsContent value="list" className="mt-4">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 grid-cols-2 xl:grid-cols-3">
             {filtered.slice(0, 60).map((r) => <ResourceCard key={r.id} r={r} onClick={() => setSelected(r)} />)}
           </div>
           {filtered.length > 60 && (
@@ -503,7 +503,7 @@ function ShelterIntel({ shelters }: { shelters: EmergencyResource[] }) {
         <KpiSmall label="Capacity" value={capacity.toLocaleString()} />
         <KpiSmall label="At capacity" value={occupied} accent="text-red-600" />
       </div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 grid-cols-2 xl:grid-cols-3">
         {shelters.slice(0, 30).map((s) => {
           const pct = s.capacity ? Math.round((s.currentLoad / s.capacity) * 100) : 0;
           return (
@@ -547,7 +547,7 @@ function HospitalIntel({ hospitals }: { hospitals: EmergencyResource[] }) {
         <KpiSmall label="Free ICU" value={icuFree.toLocaleString()} accent="text-cyan-600" />
         <KpiSmall label="Trauma centers" value={trauma} accent="text-red-600" />
       </div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 grid-cols-2 xl:grid-cols-3">
         {hospitals.slice(0, 30).map((h) => {
           const occ = h.beds ? Math.round((h.currentLoad / h.beds) * 100) : 0;
           return (

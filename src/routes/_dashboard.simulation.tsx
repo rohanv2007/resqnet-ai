@@ -630,7 +630,7 @@ function Page_simulation() {
         {/* ===== Main panel ===== */}
         <div className="space-y-4">
           {/* Live KPIs */}
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
             <KPI title="Affected Population" value={current?.affected_population.toLocaleString("en-IN") ?? "0"}
               detail={`peak ${peak?.affected_population.toLocaleString("en-IN")} @ T+${peak?.hour.toFixed(1)}h`}
               icon={<Users className="h-4 w-4" />} live={running} />
