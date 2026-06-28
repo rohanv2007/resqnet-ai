@@ -643,31 +643,31 @@ function Page_simulation() {
 
           {/* Map + scrubber */}
           <Card className="rounded-lg shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div className="space-y-1">
+            <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1 min-w-0">
                 <CardTitle className="text-base">Geospatial Impact Map</CardTitle>
                 <p className="text-xs text-muted-foreground">
-                  Wind-driven plume · flood depth heat · live distress beacons
+                  Wind-driven plume · flood depth · live distress beacons
                 </p>
               </div>
-              <Badge variant="outline" className="font-mono text-xs">
-                {disasterLabels[params.disaster]} · intensity {current?.intensity}/100
+              <Badge variant="outline" className="self-start font-mono text-[10px] sm:text-xs">
+                {disasterLabels[params.disaster]} · {current?.intensity}/100
               </Badge>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-3 sm:p-6">
               <ConfidenceBar confidence={current?.confidence ?? 70} />
               <MapView
                 center={center}
                 shelters={shelters}
                 reports={distressMarkers}
                 simulationZones={impactZones}
-                height="430px"
+                height="380px"
               />
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground sm:text-xs">
                   <span>T+0h</span>
-                  <span className="font-mono">
-                    Step {stepIndex + 1} / {frames.length} · hour-by-hour replay
+                  <span className="truncate font-mono text-center">
+                    Step {stepIndex + 1}/{frames.length}
                   </span>
                   <span>T+{params.duration_hours}h</span>
                 </div>
