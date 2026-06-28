@@ -86,7 +86,7 @@ export function LoginForm() {
           >
             <span>{user.name}</span>
             <span className="text-xs capitalize text-muted-foreground">
-              {user.role}
+              {user.role === "authority" ? "Control Room" : user.role}
             </span>
           </Button>
         ))}
