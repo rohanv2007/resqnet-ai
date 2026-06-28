@@ -176,8 +176,8 @@ function Page_evacuation() {
                     key={shelter.id}
                     className={`rounded-lg border bg-background p-3 transition ${active ? "border-brand ring-1 ring-brand" : ""}`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{shelter.name}</p>
                         <p className="text-xs text-muted-foreground">
                           {shelter.distanceKm ?? "—"} km · {fmtDuration(shelter.durationMin)}
@@ -186,16 +186,16 @@ function Page_evacuation() {
                       <StatusBadge status={shelter.status} />
                     </div>
                     <Progress value={occupancy} className="mt-3 h-1.5" />
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        {occupancy}% occupied ({shelter.occupancy}/{shelter.capacity})
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-[11px] text-muted-foreground sm:text-xs">
+                        {occupancy}% ({shelter.occupancy}/{shelter.capacity})
                       </span>
                       <Button
                         size="sm"
                         variant={active ? "default" : "outline"}
                         onClick={() => setSelectedShelterId(shelter.id)}
                       >
-                        {active ? "Selected" : "Select Route"}
+                        {active ? "Selected" : "Select"}
                       </Button>
                     </div>
                   </div>
