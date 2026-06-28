@@ -28,7 +28,7 @@ export function LoginForm() {
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      identifier: "collector.ernakulam@resqnet.in",
+      identifier: "controlroom@resqnet.in",
       password: "demo1234",
     },
   });

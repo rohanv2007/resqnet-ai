@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Building2, HandHeart, UserRound } from "lucide-react";
+import { Building2, UserRound } from "lucide-react";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -9,8 +9,7 @@ export const Route = createFileRoute("/role-selection")({
 });
 
 const roles = [
-  { role: "authority" as const, title: "Authority", icon: Building2 },
-  { role: "ngo" as const, title: "NGO", icon: HandHeart },
+  { role: "authority" as const, title: "Control Room", icon: Building2 },
   { role: "citizen" as const, title: "Citizen", icon: UserRound },
 ];
 

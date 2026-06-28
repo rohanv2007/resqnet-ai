@@ -110,10 +110,8 @@ function RegisterPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="authority">Authority</SelectItem>
-                <SelectItem value="ngo">NGO</SelectItem>
+                <SelectItem value="authority">Control Room</SelectItem>
                 <SelectItem value="citizen">Citizen</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
           </div>
