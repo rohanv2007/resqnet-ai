@@ -34,7 +34,11 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const isAuthority = user?.role === "authority" || user?.role === "admin";
+  const visibleNav = navItems.filter((i) =>
+    isAuthority ? true : !["/simulation", "/alerts", "/resources"].includes(i.href),
+  );
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 border-r bg-sidebar lg:block">
