@@ -268,8 +268,8 @@ function Page_reports() {
         title={isCitizen ? "Report an Incident" : "Citizen Reports"}
         description={
           isCitizen
-            ? "Send field evidence to authorities — add a photo if possible."
-            : "Live feed of citizen reports from the web app and Telegram subscribers."
+            ? "Send field evidence to authorities. Verified updates from your community appear below."
+            : "Live feed of citizen reports from the web app and Telegram subscribers. Verify or remove as needed."
         }
       />
       <div className={`grid gap-4 ${isCitizen ? "xl:grid-cols-[420px_1fr]" : "grid-cols-1"}`}>
