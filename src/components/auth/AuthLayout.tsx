@@ -31,14 +31,8 @@ export function AuthLayout({
       </section>
       <section className="flex items-center justify-center p-6">
         <div className="w-full max-w-md">
-          <div className="mb-8 flex items-center gap-3">
-            <ResQNetLogo size={40} />
-            <div>
-              <p className="font-semibold">ResQNet</p>
-              <p className="text-xs text-muted-foreground">
-                Disaster Intelligence Platform
-              </p>
-            </div>
+          <div className="mb-8">
+            <ResQNetLogo size={40} showWordmark />
           </div>
           <div className="mb-6">
             <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
