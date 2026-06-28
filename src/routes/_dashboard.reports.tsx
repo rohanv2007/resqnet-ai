@@ -18,8 +18,9 @@ import { LastUpdated, StatusBadge } from "@/components/shared";
 import { reportIcons, reportLabels } from "@/lib/labels";
 import { useRiskData } from "@/lib/hooks/useRiskData";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { submitCitizenReport } from "@/lib/reports.functions";
+import { submitCitizenReport, updateReportStatus, deleteReport } from "@/lib/reports.functions";
 import type { ReportStatus, ReportType } from "@/types";
+import { CheckCircle2, Trash2 } from "lucide-react";
 
 const reportTypes = [
   "rising_water",
