@@ -90,16 +90,41 @@ export const sendAlert = createServerFn({ method: "POST" })
       return 2 * R * Math.asin(Math.sqrt(s));
     };
 
-    if (alert.channels.includes("telegram") && process.env.TELEGRAM_API_KEY && process.env.LOVABLE_API_KEY) {
-      type Sub = { chat_id: number; lat: number | null; lng: number | null };
+    if (process.env.TELEGRAM_API_KEY && process.env.LOVABLE_API_KEY) {
+      type Sub = { chat_id: number; lat: number | null; lng: number | null; language: string | null; first_name: string | null };
       let recipients: { chat_id: string; personalText: string }[] = [];
+
+      // AI bilingual translator (cached per language)
+      const translationCache = new Map<string, string>();
+      const translate = async (lang: string): Promise<string> => {
+        if (!lang || lang === "english") return "";
+        if (translationCache.has(lang)) return translationCache.get(lang)!;
+        try {
+          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${process.env.LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: `Translate the disaster alert below into ${lang} using its native script. Keep markdown (*bold*, links). Return ONLY the translation, no preface.` },
+                { role: "user", content: `*${alert.title}*\n\n${alert.message}` },
+              ],
+            }),
+          });
+          if (!r.ok) throw new Error(String(r.status));
+          const j = await r.json() as { choices?: Array<{ message?: { content?: string } }> };
+          const t = j.choices?.[0]?.message?.content?.trim() ?? "";
+          translationCache.set(lang, t);
+          return t;
+        } catch { return ""; }
+      };
 
       if (data.telegram_chat_id) {
         recipients = [{ chat_id: data.telegram_chat_id, personalText: baseText }];
       } else {
         const { data: subs } = await supabaseAdmin
           .from("telegram_subscribers")
-          .select("chat_id,lat,lng")
+          .select("chat_id,lat,lng,language,first_name")
           .eq("active", true);
         const all = (subs ?? []) as Sub[];
         const radius = (alert.radius_km ?? 25) as number;
@@ -108,13 +133,19 @@ export const sendAlert = createServerFn({ method: "POST" })
           let personalText = baseText;
           if (hazardLat != null && hazardLng != null && s.lat != null && s.lng != null) {
             const d = distKm({ lat: hazardLat, lng: hazardLng }, { lat: s.lat, lng: s.lng });
-            if (d > radius) continue; // out of impact zone — skip
-            // Personalised Google Maps directions from user → safe zone outside hazard
+            if (d > radius) continue;
             const dirUrl = `https://www.google.com/maps/dir/?api=1&origin=${s.lat},${s.lng}&destination=${hazardLat},${hazardLng}&travelmode=driving`;
             personalText = `🚨 *${localizedTitle}*\n\n${localizedMsg}\n\n📏 You are *${d.toFixed(1)} km* from the impact zone.\n_Severity: ${alert.severity.toUpperCase()}_\n\n🧭 [Open evacuation route in Google Maps](${dirUrl})\n\n_Source: ResQNet hyperlocal alert_`;
           } else if (hazardLat != null && hazardLng != null && (s.lat == null || s.lng == null)) {
-            // Subscriber didn't share location — still notify but ask them to share
             personalText = baseText + `\n\n_Tip: send /location in the bot to get personalised distance & route._`;
+          }
+
+          const lang = (s.language ?? "english").toLowerCase();
+          if (lang !== "english") {
+            const translated = await translate(lang);
+            if (translated) {
+              personalText = personalText + `\n\n— — — — — — — — — —\n🌐 *${lang.toUpperCase()}*\n\n${translated}`;
+            }
           }
           recipients.push({ chat_id: String(s.chat_id), personalText });
         }
@@ -149,10 +180,6 @@ export const sendAlert = createServerFn({ method: "POST" })
           }
         }
       }
-    }
-    for (const ch of alert.channels) {
-      if (ch === "telegram") continue;
-      deliveries.push({ channel: ch, status: "queued", recipient: null, provider_response: "mock" });
     }
 
     await supabaseAdmin.from("alert_deliveries").insert(
