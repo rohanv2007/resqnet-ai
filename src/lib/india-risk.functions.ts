@@ -283,41 +283,50 @@ async function fetchFIRMS(): Promise<HazardPoint[]> {
   const key = process.env.NASA_FIRMS_MAP_KEY;
   if (!key) return [];
   const area = `${INDIA_BBOX.minLng},${INDIA_BBOX.minLat},${INDIA_BBOX.maxLng},${INDIA_BBOX.maxLat}`;
-  try {
-    const r = await fetch(`https://firms.modaps.eosdis.nasa.gov/api/area/csv/${key}/VIIRS_SNPP_NRT/${area}/1`);
-    if (!r.ok) return [];
-    const csv = await r.text();
-    const lines = csv.trim().split("\n");
-    if (lines.length < 2) return [];
-    const h = lines[0].split(",");
-    const iLat = h.indexOf("latitude"), iLng = h.indexOf("longitude");
-    const iFrp = h.indexOf("frp"), iConf = h.indexOf("confidence"), iDt = h.indexOf("acq_date"), iTm = h.indexOf("acq_time");
-    const out: HazardPoint[] = [];
-    for (const row of lines.slice(1)) {
-      const c = row.split(",");
-      const lat = Number(c[iLat]), lng = Number(c[iLng]);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-      const frp = Number(c[iFrp]) || 0;
-      const conf = c[iConf];
-      const confScore = conf === "h" ? 90 : conf === "n" ? 60 : conf === "l" ? 30 : Number(conf) || 50;
-      const score = Math.min(100, frp * 1.4 + confScore * 0.4);
-      out.push({
-        id: `firms-${lat.toFixed(3)}-${lng.toFixed(3)}-${c[iDt]}-${c[iTm]}`,
-        hazard: "wildfire",
-        lat, lng,
-        score,
-        severity: sev(score),
-        title: `Active fire (FRP ${frp.toFixed(0)})`,
-        detail: `VIIRS SNPP · confidence ${conf}`,
-        source: "NASA FIRMS",
-        timestamp: `${c[iDt]}T${(c[iTm] ?? "0000").toString().padStart(4, "0").replace(/(\d{2})(\d{2})/, "$1:$2")}:00Z`,
-        meta: { frp, confidence: confScore },
-      });
-    }
-    return out.slice(0, 800);
-  } catch {
-    return [];
-  }
+  // Query multiple sensors in parallel for broader coverage (SNPP is often
+  // quiet now; NOAA-20/21 + MODIS catch more fires). 2-day window absorbs NRT lag.
+  const sensors = ["VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT", "VIIRS_SNPP_NRT", "MODIS_NRT"];
+  const seen = new Map<string, HazardPoint>();
+  await Promise.all(sensors.map(async (sensor) => {
+    try {
+      const r = await fetch(`https://firms.modaps.eosdis.nasa.gov/api/area/csv/${key}/${sensor}/${area}/2`);
+      if (!r.ok) return;
+      const csv = await r.text();
+      const lines = csv.trim().split("\n");
+      if (lines.length < 2) return;
+      const h = lines[0].split(",");
+      const iLat = h.indexOf("latitude"), iLng = h.indexOf("longitude");
+      const iFrp = h.indexOf("frp"), iConf = h.indexOf("confidence");
+      const iDt = h.indexOf("acq_date"), iTm = h.indexOf("acq_time");
+      if (iLat < 0 || iLng < 0) return;
+      for (const row of lines.slice(1)) {
+        const c = row.split(",");
+        const lat = Number(c[iLat]), lng = Number(c[iLng]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+        const frp = Number(c[iFrp]) || 0;
+        const conf = c[iConf] ?? "";
+        const confScore = conf === "h" ? 90 : conf === "n" ? 60 : conf === "l" ? 30 : Number(conf) || 50;
+        const score = Math.min(100, frp * 1.4 + confScore * 0.4);
+        // Dedup nearby pixels across sensors
+        const k = `${lat.toFixed(2)}-${lng.toFixed(2)}-${c[iDt]}`;
+        const prev = seen.get(k);
+        if (prev && prev.score >= score) continue;
+        seen.set(k, {
+          id: `firms-${sensor}-${lat.toFixed(3)}-${lng.toFixed(3)}-${c[iDt]}-${c[iTm]}`,
+          hazard: "wildfire",
+          lat, lng,
+          score,
+          severity: sev(score),
+          title: `Active fire (FRP ${frp.toFixed(0)})`,
+          detail: `${sensor.replace(/_NRT$/, "")} · confidence ${conf || "?"}`,
+          source: "NASA FIRMS",
+          timestamp: `${c[iDt]}T${(c[iTm] ?? "0000").toString().padStart(4, "0").replace(/(\d{2})(\d{2})/, "$1:$2")}:00Z`,
+          meta: { frp, confidence: confScore, sensor },
+        });
+      }
+    } catch { /* ignore one sensor */ }
+  }));
+  return Array.from(seen.values()).slice(0, 1200);
 }
 
 interface NominatimResult { lat: string; lon: string; display_name: string; type: string }
