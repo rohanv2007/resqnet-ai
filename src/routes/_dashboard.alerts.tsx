@@ -110,15 +110,15 @@ function Page_alerts() {
       {/* Automatic AI Alert System — proof for judges */}
       <Card className="rounded-lg border-brand/40 bg-gradient-to-br from-brand/10 via-brand/5 to-transparent shadow-sm">
         <CardHeader>
-          <CardTitle className="flex flex-col gap-2 text-base sm:flex-row sm:items-center sm:justify-between">
-            <span className="flex flex-wrap items-center gap-2">
+          <CardTitle className="flex items-center justify-between gap-2 text-base">
+            <span className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-brand" />
               Automatic AI Alert System
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-500">
+              <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-500">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> live
               </span>
             </span>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
               <Button
                 size="sm"
                 variant="outline"
@@ -134,7 +134,7 @@ function Page_alerts() {
                 disabled={sweepMutation.isPending}
               >
                 <Bot className="h-3.5 w-3.5" />
-                {sweepMutation.isPending ? "Sweeping…" : "Run AI sweep"}
+                {sweepMutation.isPending ? "Sweeping…" : "Run AI sweep now"}
               </Button>
             </div>
           </CardTitle>
@@ -260,15 +260,13 @@ function Page_alerts() {
                 </div>
                 <div className="space-y-2">
                   <Label>Risk Level</Label>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="grid grid-cols-4 gap-2">
                     {(["low", "watch", "warning", "danger"] as const).map((level) => (
                       <Button
                         key={level}
                         type="button"
-                        size="sm"
                         variant={severity === level ? "default" : "outline"}
                         onClick={() => setSeverity(level)}
-                        className="capitalize"
                       >
                         {level}
                       </Button>

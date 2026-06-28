@@ -14,7 +14,7 @@ function DashboardLayout() {
         <Sidebar />
         <div className="lg:pl-60">
           <Topbar />
-          <main className="overflow-x-hidden px-3 py-4 sm:p-6">
+          <main className="p-4 sm:p-6">
             <Outlet />
           </main>
         </div>

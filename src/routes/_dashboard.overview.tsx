@@ -41,7 +41,7 @@ function Page_overview() {
     switch (id) {
       case "stat-cards":
         return (
-          <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatCard
               title="Active Incidents"
               value={stats.activeIncidents}
