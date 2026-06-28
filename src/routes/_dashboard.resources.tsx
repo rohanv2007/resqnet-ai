@@ -401,6 +401,7 @@ function DetailPanel({ resource, center }: { resource: EmergencyResource | null;
   const status = STATUS_META[resource.status];
   const distance = haversineKm(center, [resource.lat, resource.lng]);
   const eta = Math.round((distance / 50) * 60);
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${resource.lat},${resource.lng}`)}&travelmode=driving`;
   return (
     <Card className="rounded-lg">
       <CardContent className="space-y-4 p-5">
@@ -443,7 +444,7 @@ function DetailPanel({ resource, center }: { resource: EmergencyResource | null;
           <a href={`tel:${resource.contact.replace(/\s+/g, "")}`}>
             <Button size="sm"><Phone className="h-3.5 w-3.5" /> {resource.contact}</Button>
           </a>
-          <a href={`https://maps.google.com/maps?daddr=${resource.lat},${resource.lng}`} target="_blank" rel="noopener noreferrer">
+          <a href={directionsUrl} target="_blank" rel="noopener noreferrer">
             <Button size="sm" variant="outline"><MapPin className="h-3.5 w-3.5" /> Directions</Button>
           </a>
         </div>
