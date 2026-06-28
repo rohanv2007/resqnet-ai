@@ -129,3 +129,20 @@ export const updateReportStatus = createServerFn({ method: "POST" })
     if (error) throw error;
     return row;
   });
+
+const DeleteReport = z.object({ id: z.string().uuid() });
+
+export const deleteReport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => DeleteReport.parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: roleRow } = await context.supabase
+      .from("user_roles").select("role").eq("user_id", context.userId);
+    const roles = (roleRow ?? []).map(r => r.role);
+    const elevated = roles.some(r => r === "authority" || r === "ngo" || r === "admin");
+    if (!elevated) throw new Error("Forbidden: requires authority/ngo/admin role");
+    const { error } = await context.supabase
+      .from("citizen_reports").delete().eq("id", data.id);
+    if (error) throw error;
+    return { ok: true };
+  });

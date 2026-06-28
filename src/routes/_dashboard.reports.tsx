@@ -18,8 +18,9 @@ import { LastUpdated, StatusBadge } from "@/components/shared";
 import { reportIcons, reportLabels } from "@/lib/labels";
 import { useRiskData } from "@/lib/hooks/useRiskData";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { submitCitizenReport } from "@/lib/reports.functions";
+import { submitCitizenReport, updateReportStatus, deleteReport } from "@/lib/reports.functions";
 import type { ReportStatus, ReportType } from "@/types";
+import { CheckCircle2, Trash2 } from "lucide-react";
 
 const reportTypes = [
   "rising_water",
@@ -227,9 +228,39 @@ function Page_reports() {
   const { user } = useAuth();
   const [tab, setTab] = useState<"all" | ReportStatus>("all");
   const isCitizen = user?.role === "citizen";
+  const isResponder = user?.role === "authority" || user?.role === "ngo" || user?.role === "admin";
+  const verifyFn = useServerFn(updateReportStatus);
+  const deleteFn = useServerFn(deleteReport);
+  const qc = useQueryClient();
+
+  // Citizens see only verified/resolved reports; responders see everything.
+  const visibleReports = isResponder
+    ? reports
+    : reports.filter((r) => r.status === "verified" || r.status === "resolved");
 
   const filteredReports =
-    tab === "all" ? reports : reports.filter((report) => report.status === tab);
+    tab === "all" ? visibleReports : visibleReports.filter((report) => report.status === tab);
+
+  async function handleVerify(id: string, status: "verified" | "resolved") {
+    try {
+      await verifyFn({ data: { id, status } });
+      toast.success(status === "verified" ? "Report verified" : "Report marked resolved");
+      qc.invalidateQueries({ queryKey: ["live-bundle"] });
+    } catch (e) {
+      toast.error("Action failed", { description: (e as Error).message });
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Delete this report? This cannot be undone.")) return;
+    try {
+      await deleteFn({ data: { id } });
+      toast.success("Report deleted");
+      qc.invalidateQueries({ queryKey: ["live-bundle"] });
+    } catch (e) {
+      toast.error("Delete failed", { description: (e as Error).message });
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -237,8 +268,8 @@ function Page_reports() {
         title={isCitizen ? "Report an Incident" : "Citizen Reports"}
         description={
           isCitizen
-            ? "Send field evidence to authorities — add a photo if possible."
-            : "Live feed of citizen reports from the web app and Telegram subscribers."
+            ? "Send field evidence to authorities. Verified updates from your community appear below."
+            : "Live feed of citizen reports from the web app and Telegram subscribers. Verify or remove as needed."
         }
       />
       <div className={`grid gap-4 ${isCitizen ? "xl:grid-cols-[420px_1fr]" : "grid-cols-1"}`}>
@@ -293,6 +324,37 @@ function Page_reports() {
                           <span>by {report.reportedBy}</span>
                           <LastUpdated timestamp={report.reportedAt} />
                         </div>
+                        {isResponder && (
+                          <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+                            {report.status !== "verified" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleVerify(report.id, "verified")}
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                                Verify
+                              </Button>
+                            )}
+                            {report.status !== "resolved" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleVerify(report.id, "resolved")}
+                              >
+                                Mark resolved
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDelete(report.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     );
                   })
