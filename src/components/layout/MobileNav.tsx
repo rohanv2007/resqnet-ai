@@ -35,7 +35,7 @@ const allItems = [
 ];
 
 export function MobileNav() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const isAuthority = user?.role === "authority" || user?.role === "admin";
   const items = allItems.filter((i) => isAuthority || !i.authorityOnly);
   return (
