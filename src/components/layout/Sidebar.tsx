@@ -11,12 +11,11 @@ import {
   Package,
   Route,
   Settings,
-  Shield,
   Waves,
-  
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { ResQNetLogo } from "@/components/logo/ResQNetLogo";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/hooks/useAuth";
 
