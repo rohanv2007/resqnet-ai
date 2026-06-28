@@ -37,6 +37,7 @@ const HELP_TEXT = `🤖 *ResQNet Bot Commands*
 /shelters — nearest evacuation shelters
 /report — how to send a field report with a photo
 /location — update your saved location
+/language — set your preferred alert language 🌐
 /stop — unsubscribe
 
 📸 *Submit a report*: just send a photo with a short caption (e.g. _"flooded road near my street"_) and it goes straight to the command room.
@@ -50,6 +51,21 @@ const REPORT_HELP = `📸 *How to send a field report*
 3. Send it to me
 
 I'll attach your saved location and forward it to NDRF / authorities instantly.`;
+
+const SUPPORTED_LANGS = ["english","hindi","tamil","telugu","malayalam","kannada","bengali","marathi","gujarati","odia","punjabi"] as const;
+
+const LANG_KEYBOARD = {
+  keyboard: [
+    [{ text: "/language english" }, { text: "/language hindi" }],
+    [{ text: "/language tamil" }, { text: "/language telugu" }],
+    [{ text: "/language malayalam" }, { text: "/language kannada" }],
+    [{ text: "/language bengali" }, { text: "/language marathi" }],
+    [{ text: "/language gujarati" }, { text: "/language odia" }],
+    [{ text: "/language punjabi" }],
+  ],
+  resize_keyboard: true,
+  one_time_keyboard: true,
+};
 
 type Sub = { lat: number | null; lng: number | null; first_name: string | null };
 
