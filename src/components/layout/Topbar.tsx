@@ -46,7 +46,7 @@ export function Topbar() {
 
   return (
     <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
-      <div className="flex h-16 items-center gap-3 px-4 lg:px-6">
+      <div className="flex h-14 items-center gap-2 px-3 sm:h-16 sm:gap-3 sm:px-4 lg:px-6">
         <div className="lg:hidden">
           <MobileNav />
         </div>
@@ -64,15 +64,16 @@ export function Topbar() {
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className="max-w-[210px] justify-between rounded-full bg-card"
+              size="sm"
+              className="ml-auto h-9 min-w-0 max-w-[160px] flex-shrink justify-between rounded-full bg-card px-3 sm:ml-0 sm:max-w-[210px]"
             >
-              <span className="truncate">
-                {selectedStateCode} - {selectedLocation.name}
+              <span className="truncate text-xs sm:text-sm">
+                {selectedStateCode} · {selectedLocation.name}
               </span>
-              <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-60" />
+              <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-60 sm:ml-2 sm:h-4 sm:w-4" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-[280px] p-0">
+          <PopoverContent align="end" className="w-[260px] p-0 sm:w-[280px]">
             <Command>
               <CommandInput placeholder="Search city or state..." />
               <CommandList className="max-h-[320px]">
@@ -103,9 +104,11 @@ export function Topbar() {
             </Command>
           </PopoverContent>
         </Popover>
-        <DataSourceIndicator activeSources={activeSources} />
+        <div className="hidden sm:block">
+          <DataSourceIndicator activeSources={activeSources} />
+        </div>
         <ThemeToggle />
-        <Button variant="outline" size="icon" className="rounded-full">
+        <Button variant="outline" size="icon" className="hidden h-9 w-9 rounded-full sm:inline-flex">
           <Bell className="h-4 w-4" />
           <span className="sr-only">Notifications</span>
         </Button>
