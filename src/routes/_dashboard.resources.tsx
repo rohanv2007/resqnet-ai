@@ -408,21 +408,6 @@ function DetailPanel({ resource, center }: { resource: EmergencyResource | null;
   const googleDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=driving`;
   const osmDirectionsUrl = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${encodeURIComponent(`${origin};${destination}`)}`;
 
-  const openGoogleDirections = () => {
-    // Lovable preview runs inside a sandboxed iframe; opening Google Maps in a
-    // sandboxed _blank tab can show ERR_BLOCKED_BY_RESPONSE. A user-clicked
-    // top-level navigation avoids that, while production still works normally.
-    try {
-      if (window.top && window.top !== window) {
-        window.top.location.href = googleDirectionsUrl;
-        return;
-      }
-    } catch {
-      // Cross-origin top navigation can be restricted by the host; fall through.
-    }
-    window.location.href = googleDirectionsUrl;
-  };
-
   const copyGoogleLink = async () => {
     try {
       await navigator.clipboard.writeText(googleDirectionsUrl);
@@ -475,8 +460,10 @@ function DetailPanel({ resource, center }: { resource: EmergencyResource | null;
           <Button asChild size="sm">
             <a href={`tel:${resource.contact.replace(/\s+/g, "")}`}><Phone className="h-3.5 w-3.5" /> {resource.contact}</a>
           </Button>
-          <Button type="button" size="sm" variant="outline" onClick={openGoogleDirections}>
-            <MapPin className="h-3.5 w-3.5" /> Google directions
+          <Button asChild size="sm" variant="outline">
+            <a href={googleDirectionsUrl} target="_blank" rel="noopener noreferrer">
+              <MapPin className="h-3.5 w-3.5" /> Google directions
+            </a>
           </Button>
           <Button asChild size="sm" variant="secondary">
             <a href={osmDirectionsUrl} target="_blank" rel="noopener noreferrer">OSM backup</a>
