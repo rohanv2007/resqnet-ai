@@ -353,7 +353,7 @@ export const getLiveRiskBundle = createServerFn({ method: "GET" })
       capacity: s.capacity ?? 0,
       occupancy: s.occupancy ?? 0,
       contact: s.contact ?? "",
-      facilities: s.facilities ?? [],
+      facilities: (Array.isArray(s.facilities) ? s.facilities : []) as string[],
       status: (s.status ?? "open") as "open" | "full" | "closed",
       distanceKm: Math.round(haversineKm([data.lat, data.lng], [Number(s.lat), Number(s.lng)]) * 10) / 10,
     }));
