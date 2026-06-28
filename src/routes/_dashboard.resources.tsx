@@ -190,28 +190,28 @@ function Page() {
 
       {/* Filters */}
       <Card className="rounded-lg">
-        <CardContent className="flex flex-wrap items-center gap-3 p-4">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <div className="relative w-full sm:w-64">
+        <CardContent className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center lg:gap-3 lg:p-4">
+          <div className="hidden lg:flex"><Filter className="h-4 w-4 text-muted-foreground" /></div>
+          <div className="relative col-span-full lg:w-64">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search resource, city, district…" className="pl-8" />
           </div>
           <Select value={stateFilter} onValueChange={(v) => { setStateFilter(v); setCityFilter("all"); }}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="All states" /></SelectTrigger>
+            <SelectTrigger className="w-full lg:w-44"><SelectValue placeholder="All states" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All India</SelectItem>
               {states.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={cityFilter} onValueChange={setCityFilter} disabled={stateFilter === "all"}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="All cities" /></SelectTrigger>
+            <SelectTrigger className="w-full lg:w-44"><SelectValue placeholder="All cities" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All districts</SelectItem>
               {citiesInState.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as EmergencyResourceType | "all")}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="All types" /></SelectTrigger>
+            <SelectTrigger className="w-full lg:w-48"><SelectValue placeholder="All types" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All resource types</SelectItem>
               {ALL_TYPES.map((t) => (
@@ -220,13 +220,13 @@ function Page() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ResourceStatus | "all")}>
-            <SelectTrigger className="w-40"><SelectValue placeholder="All statuses" /></SelectTrigger>
+            <SelectTrigger className="w-full lg:w-40"><SelectValue placeholder="All statuses" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
               {ALL_STATUSES.map((s) => <SelectItem key={s} value={s}>{STATUS_META[s].label}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button variant="ghost" size="sm" onClick={() => { setStateFilter("all"); setCityFilter("all"); setTypeFilter("all"); setStatusFilter("all"); setSearch(""); }}>Reset</Button>
+          <Button variant="ghost" size="sm" className="col-span-full lg:col-auto" onClick={() => { setStateFilter("all"); setCityFilter("all"); setTypeFilter("all"); setStatusFilter("all"); setSearch(""); }}>Reset filters</Button>
         </CardContent>
       </Card>
 
