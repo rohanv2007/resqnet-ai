@@ -43,9 +43,7 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 border-r bg-sidebar lg:block">
       <div className="flex h-full flex-col">
         <Link to="/overview" className="flex h-16 items-center gap-3 px-5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white">
-            <Shield className="h-5 w-5" />
-          </span>
+          <ResQNetLogo size={36} />
           <div>
             <p className="text-sm font-semibold leading-none">ResQNet</p>
             <p className="mt-1 text-[11px] text-muted-foreground">
