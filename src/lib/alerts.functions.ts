@@ -218,3 +218,41 @@ export const getSubscriberCount = createServerFn({ method: "GET" })
       .eq("active", true);
     return { count: count ?? 0 };
   });
+
+export const getAutoAlertActivity = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: subs } = await supabaseAdmin
+      .from("telegram_subscribers")
+      .select("chat_id,first_name,language,last_auto_alert_at,last_auto_alert_level,last_auto_alert_key,lat,lng")
+      .eq("active", true)
+      .order("last_auto_alert_at", { ascending: false, nullsFirst: false })
+      .limit(15);
+    const { count: activeCount } = await supabaseAdmin
+      .from("telegram_subscribers")
+      .select("chat_id", { count: "exact", head: true })
+      .eq("active", true);
+    const { count: locatedCount } = await supabaseAdmin
+      .from("telegram_subscribers")
+      .select("chat_id", { count: "exact", head: true })
+      .eq("active", true)
+      .not("lat", "is", null);
+    return {
+      activeCount: activeCount ?? 0,
+      locatedCount: locatedCount ?? 0,
+      recent: subs ?? [],
+    };
+  });
+
+export const triggerAutoAlertSweep = createServerFn({ method: "POST" })
+  .handler(async () => {
+    // Call internal hook so we reuse the exact production sweep logic
+    const url = (process.env.PUBLIC_APP_URL ?? "") + "/api/public/hooks/auto-alerts";
+    if (!url.startsWith("http")) {
+      // fallback: directly import logic-less message
+      return { ok: false, error: "PUBLIC_APP_URL not set — trigger via cron" };
+    }
+    const r = await fetch(url, { method: "POST" });
+    const j = await r.json().catch(() => ({}));
+    return j;
+  });
