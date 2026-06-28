@@ -32,9 +32,7 @@ export function AuthLayout({
       <section className="flex items-center justify-center p-6">
         <div className="w-full max-w-md">
           <div className="mb-8 flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-white">
-              <Shield className="h-5 w-5" />
-            </span>
+            <ResQNetLogo size={40} />
             <div>
               <p className="font-semibold">ResQNet</p>
               <p className="text-xs text-muted-foreground">
