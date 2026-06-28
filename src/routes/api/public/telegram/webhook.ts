@@ -389,7 +389,35 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           return Response.json({ ok: true });
         }
 
-        if (lower.startsWith("/stop")) {
+        if (lower.startsWith("/language")) {
+          const parts = lower.split(/\s+/);
+          const choice = parts[1];
+          if (!choice || !SUPPORTED_LANGS.includes(choice as typeof SUPPORTED_LANGS[number])) {
+            await tg("sendMessage", {
+              chat_id: chat.id,
+              text: "🌐 *Choose your preferred alert language*\n\nTap a button below. AI alerts will be sent to you in *English + your language*.",
+              parse_mode: "Markdown",
+              reply_markup: LANG_KEYBOARD,
+            });
+            return Response.json({ ok: true });
+          }
+          await supabaseAdmin.from("telegram_subscribers").upsert({
+            chat_id: chat.id,
+            username: chat.username ?? msg.from?.username ?? null,
+            first_name: chat.first_name ?? msg.from?.first_name ?? null,
+            active: true,
+            language: choice,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "chat_id" });
+          await tg("sendMessage", {
+            chat_id: chat.id,
+            text: `✅ Language set to *${choice}*. You'll receive bilingual alerts (English + ${choice}).`,
+            parse_mode: "Markdown",
+            reply_markup: { remove_keyboard: true },
+          });
+          return Response.json({ ok: true });
+        }
+
           await supabaseAdmin.from("telegram_subscribers")
             .update({ active: false, updated_at: new Date().toISOString() })
             .eq("chat_id", chat.id);
