@@ -10,6 +10,7 @@ import {
   Route,
   Settings,
   Shield,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +35,7 @@ const allItems = [
 ];
 
 export function MobileNav() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const isAuthority = user?.role === "authority" || user?.role === "admin";
   const items = allItems.filter((i) => isAuthority || !i.authorityOnly);
   return (
@@ -69,6 +70,16 @@ export function MobileNav() {
             );
           })}
         </nav>
+        <div className="mt-4 border-t px-4 pt-4">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-muted-foreground"
+            onClick={() => void logout()}
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Button>
+        </div>
       </SheetContent>
     </Sheet>
   );
