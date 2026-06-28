@@ -136,10 +136,10 @@ function Page_evacuation() {
                         size="sm"
                         variant={active ? "default" : "outline"}
                         onClick={() => setMode(m)}
-                        className="gap-1.5"
+                        className="h-9 gap-1 px-2 text-xs sm:gap-1.5 sm:text-sm"
                       >
                         <Icon className="h-3.5 w-3.5" />
-                        {MODE_META[m].label}
+                        <span className="truncate">{MODE_META[m].label}</span>
                       </Button>
                     );
                   })}
