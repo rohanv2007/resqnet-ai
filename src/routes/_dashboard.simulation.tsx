@@ -496,24 +496,20 @@ function Page_simulation() {
       />
 
       {/* Top status strip */}
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-4 py-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border bg-card px-3 py-2.5 text-xs sm:px-4 sm:py-3 sm:text-sm">
         <div className="flex items-center gap-2">
           <span className={`h-2 w-2 animate-pulse rounded-full ${running ? "bg-risk-danger" : "bg-risk-low"}`} />
-          <span className="text-sm font-semibold">
-            {running ? (replay ? "REPLAY" : "LIVE SIMULATION") : "STANDBY"}
+          <span className="font-semibold">
+            {running ? (replay ? "REPLAY" : "LIVE SIM") : "STANDBY"}
           </span>
         </div>
-        <span className="text-muted-foreground">·</span>
-        <span className="text-sm">EOC: <strong>{selectedLocation.name}</strong></span>
-        <span className="text-muted-foreground">·</span>
-        <span className="font-mono text-sm">T+{current?.hour.toFixed(2)}h / {params.duration_hours}h</span>
-        <span className="text-muted-foreground">·</span>
+        <span className="truncate"><span className="text-muted-foreground">EOC:</span> <strong>{selectedLocation.name}</strong></span>
+        <span className="font-mono">T+{current?.hour.toFixed(2)}h / {params.duration_hours}h</span>
         <StatusBadge status={current?.level ?? "low"}>
           <span className="h-1.5 w-1.5 rounded-full bg-current" />
         </StatusBadge>
-        <span className="text-muted-foreground">·</span>
-        <span className="text-sm">Confidence <strong className="font-mono">{current?.confidence}%</strong></span>
-        <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+        <span><span className="text-muted-foreground">Conf</span> <strong className="font-mono">{current?.confidence}%</strong></span>
+        <div className="ml-auto hidden items-center gap-2 text-xs text-muted-foreground md:flex">
           <Radio className="h-3.5 w-3.5" /> NDRF · Chennai Corp · TN SDMA
         </div>
       </div>
