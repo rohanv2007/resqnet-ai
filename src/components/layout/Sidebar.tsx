@@ -34,7 +34,11 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const isAuthority = user?.role === "authority" || user?.role === "admin";
+  const visibleNav = navItems.filter((i) =>
+    isAuthority ? true : !["/simulation", "/alerts", "/resources"].includes(i.href),
+  );
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 border-r bg-sidebar lg:block">
@@ -55,7 +59,7 @@ export function Sidebar() {
           <p className="px-3 pb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Operations
           </p>
-          {navItems.map((item) => {
+          {visibleNav.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
             return (

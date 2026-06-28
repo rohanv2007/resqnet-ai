@@ -21,6 +21,13 @@ export function DashboardGuard({ children }: { children: ReactNode }) {
         replace: true,
       });
     }
+    if (isClient && !isLoading && user) {
+      const authorityOnly = ["/simulation", "/alerts", "/resources"];
+      const isAuthority = user.role === "authority" || user.role === "admin";
+      if (!isAuthority && authorityOnly.some((p) => pathname.startsWith(p))) {
+        navigate({ to: "/overview", replace: true });
+      }
+    }
   }, [isClient, isLoading, pathname, navigate, user]);
 
   if (!isClient) return null;
