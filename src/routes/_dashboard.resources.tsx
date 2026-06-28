@@ -265,21 +265,23 @@ function Page() {
 
         <TabsContent value="deployment" className="mt-4 space-y-3">
           <Card className="rounded-lg">
-            <CardContent className="flex flex-wrap items-center gap-3 p-4">
-              <p className="text-sm font-medium">Scenario:</p>
-              {[
-                { k: "flood", l: "Flood", I: Waves },
-                { k: "cyclone", l: "Cyclone", I: Wind },
-                { k: "earthquake", l: "Earthquake", I: Mountain },
-                { k: "fire", l: "Fire", I: Flame },
-                { k: "medical", l: "Medical Surge", I: HeartPulse },
-                { k: "landslide", l: "Landslide", I: AlertTriangle },
-              ].map(({ k, l, I }) => (
-                <Button key={k} size="sm" variant={scenario === k ? "default" : "outline"} onClick={() => setScenario(k as keyof typeof EMERGENCY_PLAYBOOK)}>
-                  <I className="h-3.5 w-3.5" /> {l}
-                </Button>
-              ))}
-              <span className="ml-auto text-xs text-muted-foreground">Incident origin: <strong>{selectedLocation.name}, {selectedLocation.state}</strong></span>
+            <CardContent className="space-y-3 p-3 sm:p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-medium">Scenario:</p>
+                {[
+                  { k: "flood", l: "Flood", I: Waves },
+                  { k: "cyclone", l: "Cyclone", I: Wind },
+                  { k: "earthquake", l: "Earthquake", I: Mountain },
+                  { k: "fire", l: "Fire", I: Flame },
+                  { k: "medical", l: "Medical", I: HeartPulse },
+                  { k: "landslide", l: "Landslide", I: AlertTriangle },
+                ].map(({ k, l, I }) => (
+                  <Button key={k} size="sm" variant={scenario === k ? "default" : "outline"} onClick={() => setScenario(k as keyof typeof EMERGENCY_PLAYBOOK)}>
+                    <I className="h-3.5 w-3.5" /> {l}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Incident origin: <strong>{selectedLocation.name}, {selectedLocation.state}</strong></p>
             </CardContent>
           </Card>
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
