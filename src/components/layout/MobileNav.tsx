@@ -20,18 +20,23 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-const items = [
+import { useAuth } from "@/lib/hooks/useAuth";
+
+const allItems = [
   { href: "/overview", label: "Overview", icon: Gauge },
   { href: "/risk-map", label: "Risk Map", icon: Map },
-  { href: "/simulation", label: "Simulation", icon: ChartNoAxesCombined },
+  { href: "/simulation", label: "Simulation", icon: ChartNoAxesCombined, authorityOnly: true },
   { href: "/evacuation", label: "Evacuation", icon: Route },
   { href: "/reports", label: "Reports", icon: ClipboardList },
-  { href: "/alerts", label: "Alerts", icon: Bell },
-  { href: "/resources", label: "Resources", icon: Package },
+  { href: "/alerts", label: "Alerts", icon: Bell, authorityOnly: true },
+  { href: "/resources", label: "Resources", icon: Package, authorityOnly: true },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function MobileNav() {
+  const { user } = useAuth();
+  const isAuthority = user?.role === "authority" || user?.role === "admin";
+  const items = allItems.filter((i) => isAuthority || !i.authorityOnly);
   return (
     <Sheet>
       <SheetTrigger asChild>
